@@ -1,0 +1,343 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Centro de Nutrición Funcional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+
+    <!-- Encabezado Principal -->
+    <header class="bg-emerald-700 text-white shadow-md px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Centro de Nutrición Funcional</h1>
+                <p class="text-xs text-emerald-100 uppercase tracking-wider font-semibold">Sistema de Gestión de Eventos y Acreditación</p>
+            </div>
+            <!-- Selector de Evento Activo -->
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-medium text-emerald-100">Evento Activo:</label>
+                <select id="select-evento" onchange="cambiarEvento()" class="bg-emerald-800 border border-emerald-600 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    <option value="">Cargando eventos...</option>
+                </select>
+                <button onclick="abrirModalEvento()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm">
+                    + Nuevo Evento
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- PANEL IZQUIERDO: Formulario DML de Participantes -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                👤 Registro y Modificación
+            </h2>
+            <p class="text-xs text-slate-500 mb-6">Agrega un nuevo participante en caliente o modifica uno seleccionado desde la tabla de búsqueda.</p>
+            
+            <form id="form-participante" class="space-y-4" onsubmit="guardarParticipante(event)">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Cédula de Ciudadanía *</label>
+                    <input type="text" id="part-id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre Completo *</label>
+                    <input type="text" id="part-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Correo Electrónico de Contacto</label>
+                    <input type="email" id="part-correo" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">WhatsApp</label>
+                    <input type="text" id="part-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Profesión</label>
+                    <input type="text" id="part-profesion" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm shadow">
+                        Guardar / Actualizar
+                    </button>
+                    <button type="button" onclick="limpiarFormulario()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-3 rounded-lg transition-colors text-sm border border-slate-200">
+                        Limpiar
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- PANEL DERECHO: Buscador, Control de Asistencia y Reportes -->
+        <section class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-700">🔍 Control de Asistencia en Tiempo Real</h2>
+                    <p class="text-xs text-slate-400">Busca participantes y registra su check-in para el evento activo.</p>
+                </div>
+                <div class="text-right">
+                    <span id="contador-asistencia" class="text-2xl font-black text-emerald-600">0</span>
+                    <span class="text-xs text-slate-500 block">Acreditados</span>
+                </div>
+            </div>
+            
+            <!-- Barra de búsqueda dinámica -->
+            <div class="relative mb-6">
+                <input type="text" id="buscador" oninput="buscarParticipantes()" placeholder="Escribe cédula, nombre completo o correo para buscar..." 
+                       class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-sm">
+                <span class="absolute left-3.5 top-3.5 text-slate-400">🔎</span>
+            </div>
+
+            <!-- Tabla de Resultados -->
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 font-bold uppercase text-xs border-b border-slate-200">
+                            <th class="p-3">Participante</th>
+                            <th class="p-3">Profesión / Celular</th>
+                            <th class="p-3">Estado</th>
+                            <th class="p-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-resultados" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-slate-400 italic">
+                                Por favor selecciona o crea un evento arriba para iniciar.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL PARA CREAR NUEVO EVENTO (DDL/DML gráfico) -->
+    <div id="modal-evento" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
+            <h3 class="text-lg font-bold text-slate-700 mb-4">📅 Crear Nuevo Evento</h3>
+            <form onsubmit="guardarEvento(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre del Evento *</label>
+                    <input type="text" id="ev-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha del Evento *</label>
+                    <input type="date" id="ev-fecha" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Descripción / Notas</label>
+                    <textarea id="ev-descripcion" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="cerrarModalEvento()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                        Crear Evento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE CONEXIÓN FRONTEND-BACKEND (APIs) -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let eventoSeleccionadoId = null;
+
+        // Carga Inicial al abrir la app
+        window.addEventListener('DOMContentLoaded', () => {
+            obtenerEventos();
+        });
+
+        // 1. Obtener Historial de Eventos
+        async function obtenerEventos() {
+            try {
+                const response = await fetch(`${API_URL}/eventos`);
+                const eventos = await response.json();
+                const select = document.getElementById('select-evento');
+                select.innerHTML = '';
+                
+                if (eventos.length === 0) {
+                    select.innerHTML = '<option value="">No hay eventos creados</option>';
+                    return;
+                }
+
+                eventos.forEach((ev, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = ev.id;
+                    opt.textContent = `${ev.fecha} | ${ev.nombre}`;
+                    select.appendChild(opt);
+                });
+
+                // Seleccionar automáticamente el evento más reciente
+                select.value = eventos[0].id;
+                cambiarEvento();
+            } catch (err) {
+                console.error("Error al obtener eventos:", err);
+            }
+        }
+
+        function cambiarEvento() {
+            eventoSeleccionadoId = document.getElementById('select-evento').value;
+            buscarParticipantes();
+        }
+
+        // 2. Buscador Reactivo (Search-as-you-type)
+        async function buscarParticipantes() {
+            if (!eventoSeleccionadoId) return;
+            const query = document.getElementById('buscador').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/buscar?query=${encodeURIComponent(query)}`);
+                const participantes = await response.json();
+                renderizarTabla(participantes);
+            } catch (err) {
+                console.error("Error en la búsqueda:", err);
+            }
+        }
+
+        function renderizarTabla(participantes) {
+            const tbody = document.getElementById('tabla-resultados');
+            tbody.innerHTML = '';
+            let countAsistentes = 0;
+
+            if (participantes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">No se encontraron registros. Registra uno nuevo en el panel izquierdo.</td></tr>`;
+                document.getElementById('contador-asistencia').textContent = '0';
+                return;
+            }
+
+            participantes.forEach(p => {
+                const fila = document.createElement('tr');
+                fila.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                
+                if (p.asistio) countAsistentes++;
+
+                const badge = p.asistio
+                    ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">✓ Presente (${p.hora_acreditacion ? p.hora_acreditacion.split(' ')[1] : ''})</span>`
+                    : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">⏳ Pendiente</span>`;
+
+                const btnAcreditar = p.asistio
+                    ? `<button disabled class="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed border border-slate-200">Acreditado</button>`
+                    : `<button onclick="acreditarParticipante('${p.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">Marcar Asistencia</button>`;
+
+                fila.innerHTML = `
+                    <td class="p-3">
+                        <div class="font-bold text-slate-900">${p.nombre}</div>
+                        <div class="text-xs text-slate-400 font-mono">C.C. ${p.id}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="text-slate-700">${p.profesion || 'No definida'}</div>
+                        <div class="text-xs text-slate-400">${p.whatsapp || 'Sin WhatsApp'}</div>
+                    </td>
+                    <td class="p-3">${badge}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center gap-2">
+                            ${btnAcreditar}
+                            <button onclick="cargarParaEditar(${JSON.stringify(p).replace(/"/g, '&quot;')})" class="text-slate-500 hover:text-emerald-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-emerald-200 bg-white">
+                                ✏️ Editar
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            document.getElementById('contador-asistencia').textContent = countAsistentes;
+        }
+
+        // 3. Marcar Asistencia en Tiempo Real
+        async function acreditarParticipante(id) {
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/acreditar/${id}`, { method: 'POST' });
+                if (response.ok) {
+                    buscarParticipantes();
+                }
+            } catch (err) {
+                alert("Error al marcar asistencia");
+            }
+        }
+
+        // 4. Modificar / Registrar Participante (DML)
+        async function guardarParticipante(event) {
+            event.preventDefault();
+            const payload = {
+                id: document.getElementById('part-id').value.trim(),
+                nombre: document.getElementById('part-nombre').value.trim(),
+                correo: document.getElementById('part-correo').value.trim() || null,
+                whatsapp: document.getElementById('part-whatsapp').value.trim() || null,
+                profesion: document.getElementById('part-profesion').value.trim() || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/participantes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("¡Participante guardado/actualizado con éxito!");
+                    limpiarFormulario();
+                    buscarParticipantes();
+                } else {
+                    const data = await response.json();
+                    alert("Error: " + JSON.stringify(data.detail));
+                }
+            } catch (err) {
+                alert("Error de conexión con el servidor.");
+            }
+        }
+
+        function cargarParaEditar(p) {
+            document.getElementById('part-id').value = p.id;
+            document.getElementById('part-id').readOnly = true; // No modificar la llave primaria (cédula)
+            document.getElementById('part-id').classList.add('bg-slate-100', 'cursor-not-allowed');
+            document.getElementById('part-nombre').value = p.nombre;
+            document.getElementById('part-correo').value = p.correo || '';
+            document.getElementById('part-whatsapp').value = p.whatsapp || '';
+            document.getElementById('part-profesion').value = p.profesion || '';
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('form-participante').reset();
+            document.getElementById('part-id').readOnly = false;
+            document.getElementById('part-id').classList.remove('bg-slate-100', 'cursor-not-allowed');
+        }
+
+        // 5. Gestión de Nuevos Eventos (DDL/DML lógico)
+        function abrirModalEvento() { document.getElementById('modal-evento').classList.remove('hidden'); }
+        function cerrarModalEvento() { document.getElementById('modal-evento').classList.add('hidden'); }
+
+        async function guardarEvento(event) {
+            event.preventDefault();
+            const payload = {
+                nombre: document.getElementById('ev-nombre').value.trim(),
+                fecha: document.getElementById('ev-fecha').value,
+                descripcion: document.getElementById('ev-descripcion').value.trim() || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/eventos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("¡Nuevo evento creado!");
+                    cerrarModalEvento();
+                    obtenerEventos();
+                }
+            } catch (err) {
+                alert("Error al crear el evento");
+            }
+        }
+    </script>
+</body>
+</html>
