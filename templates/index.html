@@ -78,10 +78,21 @@
                     <h2 class="text-lg font-bold text-slate-700">🔍 Control de Asistencia en Tiempo Real</h2>
                     <p class="text-xs text-slate-400">Busca participantes y registra su check-in para el evento activo.</p>
                 </div>
-                <div class="text-right">
-                    <span id="contador-asistencia" class="text-2xl font-black text-emerald-600">0</span>
-                    <span class="text-xs text-slate-500 block">Acreditados</span>
-                </div>
+                <!-- Nuevos Contadores del Evento -->
+<div class="grid grid-cols-3 gap-4 text-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+    <div>
+        <span id="contador-total" class="text-xl font-extrabold text-slate-700 block">0</span>
+        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Registrados</span>
+    </div>
+    <div>
+        <span id="contador-asistieron" class="text-xl font-extrabold text-emerald-600 block">0</span>
+        <span class="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Asistidos</span>
+    </div>
+    <div>
+        <span id="contador-faltantes" class="text-xl font-extrabold text-rose-500 block">0</span>
+        <span class="text-[10px] text-rose-500 uppercase font-bold tracking-wider">Faltantes</span>
+    </div>
+</div>
             </div>
             
             <!-- Barra de búsqueda dinámica -->
