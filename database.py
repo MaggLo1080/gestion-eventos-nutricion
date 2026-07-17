@@ -1,13 +1,21 @@
-import sqlite3
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-# Obtiene la ruta absoluta de la carpeta donde se encuentra este archivo
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "gestion_eventos.db")
+# 1. Intentamos leer la URL de conexión desde las variables de entorno de Render.
+# Si no existe (por ejemplo, si estás corriendo el proyecto en local), usa la de Supabase.
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://postgres:ZeqrsB2HiqYoqnpg@db.ajtyzzanvjpcmmbwsfjx.supabase.co:5432/postgres"
+)
 
 def get_connection():
-    """Establece una conexión con la base de datos SQLite asegurando permisos de escritura."""
-    # El parámetro timeout ayuda si la base de datos está ocupada
-    conn = sqlite3.connect(DB_PATH, timeout=10.0)
-    conn.row_factory = sqlite3.Row
+    """Establece una conexión con la base de datos PostgreSQL en Supabase."""
+    # Conectamos usando la URL definitiva
+    conn = psycopg2.connect(DATABASE_URL)
+    
+    # RealDictCursor hace exactamente lo mismo que sqlite3.Row: 
+    # Permite acceder a las columnas por su nombre (ej: fila['nombre']) en lugar de por índice.
+    conn.cursor_factory = RealDictCursor
+    
     return conn
