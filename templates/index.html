@@ -217,11 +217,16 @@
         function renderizarTabla(participantes) {
             const tbody = document.getElementById('tabla-resultados');
             tbody.innerHTML = '';
+            
+            // Inicializar contadores
+            let totalRegistrados = participantes.length;
             let countAsistentes = 0;
 
-            if (participantes.length === 0) {
+            if (totalRegistrados === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">No se encontraron registros. Registra uno nuevo en el panel izquierdo.</td></tr>`;
-                document.getElementById('contador-asistencia').textContent = '0';
+                document.getElementById('contador-total').textContent = '0';
+                document.getElementById('contador-asistieron').textContent = '0';
+                document.getElementById('contador-faltantes').textContent = '0';
                 return;
             }
 
@@ -261,9 +266,14 @@
                 tbody.appendChild(fila);
             });
 
-            document.getElementById('contador-asistencia').textContent = countAsistentes;
-        }
+            // Calcular no asistidos (Faltantes)
+            let countFaltantes = totalRegistrados - countAsistentes;
 
+            // Actualizar los contadores en la interfaz gráfica
+            document.getElementById('contador-total').textContent = totalRegistrados;
+            document.getElementById('contador-asistieron').textContent = countAsistentes;
+            document.getElementById('contador-faltantes').textContent = countFaltantes;
+        }
         // 3. Marcar Asistencia en Tiempo Real
         async function acreditarParticipante(id) {
             try {
