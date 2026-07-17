@@ -4,66 +4,13 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
+from datetime import datetime, timedelta
 
-from database import get_connection
+# Importamos el cliente HTTP unificado que configuramos previamente
+from database import get_supabase_client
 
-# ==========================================
-# INICIALIZACIÓN AUTOMÁTICA DE LA BASE DE DATOS (PostgreSQL)
-# ==========================================
-def inicializar_base_de_datos():
-    """Crea las tablas necesarias en Supabase (PostgreSQL) si aún no existen."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        # 1. Tabla de Eventos (Se cambia INTEGER PRIMARY KEY AUTOINCREMENT por SERIAL PRIMARY KEY)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS eventos (
-                id SERIAL PRIMARY KEY,
-                nombre TEXT NOT NULL,
-                fecha TEXT NOT NULL,
-                descripcion TEXT
-            );
-        """)
-        
-        # 2. Tabla de Participantes (Estructura idéntica)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS participantes (
-                id TEXT PRIMARY KEY,
-                nombre TEXT NOT NULL,
-                correo_registro TEXT,
-                correo TEXT,
-                whatsapp TEXT,
-                profesion TEXT,
-                marca_tiempo TEXT
-            );
-        """)
-        
-        # 3. Tabla de Asistencias (Se cambia asistio INTEGER por BOOLEAN o mantenerlo numérico,
-        # pero adaptamos la sintaxis de claves foráneas)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS asistencias (
-                evento_id INTEGER,
-                participante_id TEXT,
-                asistio INTEGER DEFAULT 0,
-                hora_acreditacion TEXT,
-                PRIMARY KEY (evento_id, participante_id),
-                FOREIGN KEY (evento_id) REFERENCES eventos (id) ON DELETE CASCADE,
-                FOREIGN KEY (participante_id) REFERENCES participantes (id) ON DELETE CASCADE
-            );
-        """)
-        
-        conn.commit()
-        print("Base de datos de Supabase verificada e inicializada correctamente.")
-    except Exception as e:
-        print(f"Error crítico al inicializar la base de datos en Supabase: {e}")
-        raise e
-    finally:
-        cursor.close()
-        conn.close()
-
-# Ejecutamos la verificación antes de que arranque la aplicación de FastAPI
-inicializar_base_de_datos()
-
+# Inicializamos el cliente oficial de Supabase
+supabase = get_supabase_client()
 
 # 1. INICIALIZACIÓN DE LA APLICACIÓN
 app = FastAPI(
@@ -108,34 +55,31 @@ class ParticipanteCrear(BaseModel):
 @app.post("/eventos", tags=["Eventos"])
 def crear_evento(evento: EventoCrear):
     """Crea un nuevo evento en el sistema."""
-    conn = get_connection()
-    cursor = conn.cursor()
     try:
-        # PostgreSQL usa %s y RETURNING id para capturar el último ID insertado de forma segura
-        cursor.execute("""
-            INSERT INTO eventos (nombre, fecha, descripcion)
-            VALUES (%s, %s, %s) RETURNING id;
-        """, (evento.nombre, evento.fecha, evento.descripcion))
+        data = {
+            "nombre": evento.nombre,
+            "fecha": evento.fecha,
+            "descripcion": evento.descripcion
+        }
+        # Insertamos y solicitamos que devuelva la fila creada para capturar el ID
+        response = supabase.table("eventos").insert(data).execute()
         
-        evento_id = cursor.fetchone()['id']
-        conn.commit()
+        if not response.data:
+            raise HTTPException(status_code=500, detail="No se pudo recuperar el ID del evento creado.")
+            
+        evento_id = response.data[0]['id']
         return {"status": "success", "message": "Evento creado exitosamente", "id": evento_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al crear evento: {e}")
-    finally:
-        cursor.close()
-        conn.close()
 
 @app.get("/eventos", tags=["Eventos"])
 def listar_eventos():
     """Obtiene el historial de todos los eventos registrados."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM eventos ORDER BY fecha DESC;")
-    eventos = [dict(row) for row in cursor.fetchall()]
-    cursor.close()
-    conn.close()
-    return eventos
+    try:
+        response = supabase.table("eventos").select("*").order("fecha", desc=True).execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al listar eventos: {e}")
 
 
 # 6. MÓDULO DE ACREDITACIÓN Y BÚSQUEDA OPTIMIZADA
@@ -145,106 +89,102 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
     Busca participantes pre-registrados en un evento específico.
     Si el buscador está vacío, muestra una lista inicial de hasta 100 personas.
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Asegurar que el evento existe
-    cursor.execute("SELECT id FROM eventos WHERE id = %s;", (evento_id,))
-    if not cursor.fetchone():
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=404, detail="El evento no existe.")
+    try:
+        # Asegurar que el evento existe
+        evento_check = supabase.table("eventos").select("id").eq("id", evento_id).execute()
+        if not evento_check.data:
+            raise HTTPException(status_code=404, detail="El evento no existe.")
 
-    # Ajuste dinámico de consultas usando %s e ILIKE (no sensible a mayúsculas)
-    if query.strip() == "":
-        cursor.execute("""
-            SELECT 
-                p.id, p.nombre, p.correo, p.whatsapp, p.profesion,
-                COALESCE(a.asistio, 0) as asistio,
-                a.hora_acreditacion
-            FROM participantes p
-            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = %s
-            ORDER BY p.nombre ASC
-            LIMIT 100;
-        """, (evento_id,))
-    else:
-        search_query = f"%{query}%"
-        cursor.execute("""
-            SELECT 
-                p.id, p.nombre, p.correo, p.whatsapp, p.profesion,
-                COALESCE(a.asistio, 0) as asistio,
-                a.hora_acreditacion
-            FROM participantes p
-            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = %s
-            WHERE p.id ILIKE %s OR p.nombre ILIKE %s OR p.correo ILIKE %s
-            ORDER BY p.nombre ASC;
-        """, (evento_id, search_query, search_query, search_query))
-    
-    resultados = [dict(row) for row in cursor.fetchall()]
-    cursor.close()
-    conn.close()
-    return resultados
+        # Construimos la consulta base al directorio de participantes incluyendo la relación de asistencia
+        # El Join se realiza de forma automática mediante la API PostgREST de Supabase
+        base_query = supabase.table("participantes").select(
+            "id, nombre, correo, whatsapp, profesion, asistencias(asistio, hora_acreditacion)"
+        )
+
+        if query.strip() == "":
+            response = base_query.order("nombre", desc=False).limit(100).execute()
+        else:
+            search_pattern = f"%{query}%"
+            # Filtro usando lógica OR para ID, nombre o correo (equivalente a ILIKE en SQL)
+            response = base_query.or_(
+                f"id.ilike.{search_pattern},nombre.ilike.{search_pattern},correo.ilike.{search_pattern}"
+            ).order("nombre", desc=False).execute()
+        
+        # Formateamos la respuesta para que la estructura JSON sea idéntica a la que espera el Frontend
+        resultados = []
+        for p in response.data:
+            # Buscamos si el participante tiene una asistencia registrada para ESTE evento específico
+            asistencia_evento = [a for a in p.get("asistencias", []) if a.get("evento_id") == evento_id]
+            
+            asistio = 0
+            hora_acreditacion = None
+            if asistencia_evento:
+                asistio = asistencia_evento[0].get("asistio", 0)
+                hora_acreditacion = asistencia_evento[0].get("hora_acreditacion")
+
+            resultados.append({
+                "id": p["id"],
+                "nombre": p["nombre"],
+                "correo": p["correo"],
+                "whatsapp": p["whatsapp"],
+                "profesion": p["profesion"],
+                "asistio": asistio,
+                "hora_acreditacion": hora_acreditacion
+            })
+            
+        return resultados
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en la búsqueda de participantes: {e}")
 
 @app.post("/eventos/{evento_id}/acreditar/{participante_id}", tags=["Acreditación"])
 def acreditar_participante(evento_id: int, participante_id: str):
     """Marca la asistencia en tiempo real de un participante."""
-    conn = get_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("""
-            SELECT asistio FROM asistencias 
-            WHERE evento_id = %s AND participante_id = %s;
-        """, (evento_id, participante_id))
-        row = cursor.fetchone()
+        # Calculamos la hora local de Colombia (UTC-5) usando Python
+        hora_colombia = (datetime.utcnow() - timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Verificamos si ya existe un registro de asistencia previo
+        check = supabase.table("asistencias").select("asistio")\
+            .eq("evento_id", evento_id)\
+            .eq("participante_id", participante_id).execute()
         
-        # En PostgreSQL, para obtener la fecha y hora local formateada de forma directa:
-        # TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS') -> Ajustado a zona horaria de Colombia (UTC-5)
-        if row:
-            cursor.execute("""
-                UPDATE asistencias 
-                SET asistio = 1, hora_acreditacion = TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS')
-                WHERE evento_id = %s AND participante_id = %s;
-            """, (evento_id, participante_id))
+        if check.data:
+            # Si existe, actualizamos el estado
+            supabase.table("asistencias").update({
+                "asistio": 1,
+                "hora_acreditacion": hora_colombia
+            }).eq("evento_id", evento_id).eq("participante_id", participante_id).execute()
         else:
-            cursor.execute("""
-                INSERT INTO asistencias (evento_id, participante_id, asistio, hora_acreditacion)
-                VALUES (%s, %s, 1, TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS'));
-            """, (evento_id, participante_id))
+            # Si no existe, creamos el registro de asistencia en caliente
+            supabase.table("asistencias").insert({
+                "evento_id": evento_id,
+                "participante_id": participante_id,
+                "asistio": 1,
+                "hora_acreditacion": hora_colombia
+            }).execute()
             
-        conn.commit()
         return {"status": "success", "message": "Acreditación exitosa"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la acreditación: {e}")
-    finally:
-        cursor.close()
-        conn.close()
 
 
 # 7. MÓDULO DE CREACIÓN/MODIFICACIÓN INDIVIDUAL DE PARTICIPANTES (DML)
 @app.post("/participantes", tags=["Directorio Maestro"])
 def crear_o_actualizar_participante(participante: ParticipanteCrear):
     """Inserta un nuevo participante en caliente o actualiza sus datos existentes."""
-    conn = get_connection()
-    cursor = conn.cursor()
     try:
-        # En PostgreSQL, la sintaxis de ON CONFLICT requiere especificar la columna clave de conflicto explícitamente
-        cursor.execute("""
-            INSERT INTO participantes (id, nombre, correo_registro, correo, whatsapp, profesion, marca_tiempo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                nombre = EXCLUDED.nombre,
-                correo = EXCLUDED.correo,
-                whatsapp = EXCLUDED.whatsapp,
-                profesion = EXCLUDED.profesion;
-        """, (
-            participante.id, participante.nombre, participante.correo_registro,
-            str(participante.correo) if participante.correo else None,
-            participante.whatsapp, participante.profesion, participante.marca_tiempo
-        ))
-        conn.commit()
+        data = {
+            "id": participante.id,
+            "nombre": participante.nombre,
+            "correo_registro": participante.correo_registro,
+            "correo": str(participante.correo) if participante.correo else None,
+            "whatsapp": participante.whatsapp,
+            "profesion": participante.profesion,
+            "marca_tiempo": participante.marca_tiempo
+        }
+        
+        # En el SDK oficial de Supabase, "upsert" resuelve de forma nativa el ON CONFLICT (id)
+        supabase.table("participantes").upsert(data).execute()
         return {"status": "success", "message": "Participante guardado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
-    finally:
-        cursor.close()
-        conn.close()
