@@ -1,21 +1,20 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from supabase import create_client, Client
 
-# 1. Intentamos leer la URL de conexión desde las variables de entorno de Render.
-# Si no existe (por ejemplo, si estás corriendo el proyecto en local), usa la de Supabase.
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:ZeqrsB2HiqYoqnpg@db.ajtyzzanvjpcmmbwsfjx.supabase.co:5432/postgres"
+# 1. Leemos las credenciales HTTP desde las variables de entorno de Render.
+# Mantenemos los valores por defecto en local por si deseas probar en tu máquina.
+SUPABASE_URL = os.getenv(
+    "SUPABASE_URL", 
+    "https://ajtyzzanvjpcmmbwsfjx.supabase.co"
+)
+SUPABASE_KEY = os.getenv(
+    "SUPABASE_KEY", 
+    "sb_publishable_kgk5A_d37hTih02lNO-qaA_y9DRWxF3"
 )
 
-def get_connection():
-    """Establece una conexión con la base de datos PostgreSQL en Supabase."""
-    # Conectamos usando la URL definitiva
-    conn = psycopg2.connect(DATABASE_URL)
-    
-    # RealDictCursor hace exactamente lo mismo que sqlite3.Row: 
-    # Permite acceder a las columnas por su nombre (ej: fila['nombre']) en lugar de por índice.
-    conn.cursor_factory = RealDictCursor
-    
-    return conn
+# 2. Inicializamos el cliente oficial de Supabase
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+def get_supabase_client() -> Client:
+    """Retorna el cliente HTTP para interactuar con el Centro de Nutrición Funcional."""
+    return supabase
