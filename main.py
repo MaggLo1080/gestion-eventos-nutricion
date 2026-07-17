@@ -1,5 +1,4 @@
 import os
-import sqlite3
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,24 +8,24 @@ from pydantic import BaseModel, EmailStr
 from database import get_connection
 
 # ==========================================
-# INICIALIZACIÓN AUTOMÁTICA DE LA BASE DE DATOS
+# INICIALIZACIÓN AUTOMÁTICA DE LA BASE DE DATOS (PostgreSQL)
 # ==========================================
 def inicializar_base_de_datos():
-    """Crea las tablas necesarias en SQLite si aún no existen."""
+    """Crea las tablas necesarias en Supabase (PostgreSQL) si aún no existen."""
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # 1. Tabla de Eventos
+        # 1. Tabla de Eventos (Se cambia INTEGER PRIMARY KEY AUTOINCREMENT por SERIAL PRIMARY KEY)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS eventos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 nombre TEXT NOT NULL,
                 fecha TEXT NOT NULL,
                 descripcion TEXT
             );
         """)
         
-        # 2. Tabla de Participantes (con id como Cédula / TEXT)
+        # 2. Tabla de Participantes (Estructura idéntica)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS participantes (
                 id TEXT PRIMARY KEY,
@@ -39,7 +38,8 @@ def inicializar_base_de_datos():
             );
         """)
         
-        # 3. Tabla de Asistencias (control de acreditación por evento)
+        # 3. Tabla de Asistencias (Se cambia asistio INTEGER por BOOLEAN o mantenerlo numérico,
+        # pero adaptamos la sintaxis de claves foráneas)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS asistencias (
                 evento_id INTEGER,
@@ -47,17 +47,18 @@ def inicializar_base_de_datos():
                 asistio INTEGER DEFAULT 0,
                 hora_acreditacion TEXT,
                 PRIMARY KEY (evento_id, participante_id),
-                FOREIGN KEY (evento_id) REFERENCES eventos (id),
-                FOREIGN KEY (participante_id) REFERENCES participantes (id)
+                FOREIGN KEY (evento_id) REFERENCES eventos (id) ON DELETE CASCADE,
+                FOREIGN KEY (participante_id) REFERENCES participantes (id) ON DELETE CASCADE
             );
         """)
         
         conn.commit()
-        print("Base de datos verificada e inicializada correctamente.")
+        print("Base de datos de Supabase verificada e inicializada correctamente.")
     except Exception as e:
-        print(f"Error crítico al inicializar la base de datos: {e}")
+        print(f"Error crítico al inicializar la base de datos en Supabase: {e}")
         raise e
     finally:
+        cursor.close()
         conn.close()
 
 # Ejecutamos la verificación antes de que arranque la aplicación de FastAPI
@@ -110,16 +111,19 @@ def crear_evento(evento: EventoCrear):
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        # PostgreSQL usa %s y RETURNING id para capturar el último ID insertado de forma segura
         cursor.execute("""
             INSERT INTO eventos (nombre, fecha, descripcion)
-            VALUES (?, ?, ?);
+            VALUES (%s, %s, %s) RETURNING id;
         """, (evento.nombre, evento.fecha, evento.descripcion))
-        evento_id = cursor.lastrowid
+        
+        evento_id = cursor.fetchone()['id']
         conn.commit()
         return {"status": "success", "message": "Evento creado exitosamente", "id": evento_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al crear evento: {e}")
     finally:
+        cursor.close()
         conn.close()
 
 @app.get("/eventos", tags=["Eventos"])
@@ -129,6 +133,7 @@ def listar_eventos():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM eventos ORDER BY fecha DESC;")
     eventos = [dict(row) for row in cursor.fetchall()]
+    cursor.close()
     conn.close()
     return eventos
 
@@ -144,12 +149,13 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
     cursor = conn.cursor()
     
     # Asegurar que el evento existe
-    cursor.execute("SELECT id FROM eventos WHERE id = ?;", (evento_id,))
+    cursor.execute("SELECT id FROM eventos WHERE id = %s;", (evento_id,))
     if not cursor.fetchone():
+        cursor.close()
         conn.close()
         raise HTTPException(status_code=404, detail="El evento no existe.")
 
-    # Búsqueda con el ajuste dinámico de volumen de datos
+    # Ajuste dinámico de consultas usando %s e ILIKE (no sensible a mayúsculas)
     if query.strip() == "":
         cursor.execute("""
             SELECT 
@@ -157,7 +163,7 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
                 COALESCE(a.asistio, 0) as asistio,
                 a.hora_acreditacion
             FROM participantes p
-            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = ?
+            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = %s
             ORDER BY p.nombre ASC
             LIMIT 100;
         """, (evento_id,))
@@ -169,12 +175,13 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
                 COALESCE(a.asistio, 0) as asistio,
                 a.hora_acreditacion
             FROM participantes p
-            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = ?
-            WHERE p.id LIKE ? OR p.nombre LIKE ? OR p.correo LIKE ?
+            LEFT JOIN asistencias a ON p.id = a.participante_id AND a.evento_id = %s
+            WHERE p.id ILIKE %s OR p.nombre ILIKE %s OR p.correo ILIKE %s
             ORDER BY p.nombre ASC;
         """, (evento_id, search_query, search_query, search_query))
     
     resultados = [dict(row) for row in cursor.fetchall()]
+    cursor.close()
     conn.close()
     return resultados
 
@@ -186,20 +193,22 @@ def acreditar_participante(evento_id: int, participante_id: str):
     try:
         cursor.execute("""
             SELECT asistio FROM asistencias 
-            WHERE evento_id = ? AND participante_id = ?;
+            WHERE evento_id = %s AND participante_id = %s;
         """, (evento_id, participante_id))
         row = cursor.fetchone()
         
+        # En PostgreSQL, para obtener la fecha y hora local formateada de forma directa:
+        # TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS') -> Ajustado a zona horaria de Colombia (UTC-5)
         if row:
             cursor.execute("""
                 UPDATE asistencias 
-                SET asistio = 1, hora_acreditacion = datetime('now', 'localtime')
-                WHERE evento_id = ? AND participante_id = ?;
+                SET asistio = 1, hora_acreditacion = TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS')
+                WHERE evento_id = %s AND participante_id = %s;
             """, (evento_id, participante_id))
         else:
             cursor.execute("""
                 INSERT INTO asistencias (evento_id, participante_id, asistio, hora_acreditacion)
-                VALUES (?, ?, 1, datetime('now', 'localtime'));
+                VALUES (%s, %s, 1, TO_CHAR(NOW() - INTERVAL '5 hours', 'YYYY-MM-DD HH24:MI:SS'));
             """, (evento_id, participante_id))
             
         conn.commit()
@@ -207,6 +216,7 @@ def acreditar_participante(evento_id: int, participante_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la acreditación: {e}")
     finally:
+        cursor.close()
         conn.close()
 
 
@@ -217,14 +227,15 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        # En PostgreSQL, la sintaxis de ON CONFLICT requiere especificar la columna clave de conflicto explícitamente
         cursor.execute("""
             INSERT INTO participantes (id, nombre, correo_registro, correo, whatsapp, profesion, marca_tiempo)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                nombre = excluded.nombre,
-                correo = excluded.correo,
-                whatsapp = excluded.whatsapp,
-                profesion = excluded.profesion;
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                nombre = EXCLUDED.nombre,
+                correo = EXCLUDED.correo,
+                whatsapp = EXCLUDED.whatsapp,
+                profesion = EXCLUDED.profesion;
         """, (
             participante.id, participante.nombre, participante.correo_registro,
             str(participante.correo) if participante.correo else None,
@@ -235,4 +246,5 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
     finally:
+        cursor.close()
         conn.close()
