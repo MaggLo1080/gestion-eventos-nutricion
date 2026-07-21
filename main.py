@@ -236,3 +236,7 @@ def eliminar_evento(evento_id: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al eliminar el evento: {str(e)}"
         )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar el evento: {str(e)}"
+        )
