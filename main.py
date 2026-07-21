@@ -85,88 +85,67 @@ def listar_eventos():
 # 6. MÓDULO DE ACREDITACIÓN Y BÚSQUEDA OPTIMIZADA
 @app.get("/eventos/{evento_id}/buscar", tags=["Acreditación"])
 def buscar_participantes_evento(evento_id: int, query: str = ""):
-    """
-    Busca participantes pre-registrados en un evento específico.
-    Si el buscador está vacío, muestra una lista inicial de hasta 100 personas.
-    """
+    """Busca participantes y mapea su estado de asistencia para un evento específico."""
     try:
-        # Asegurar que el evento existe
-        evento_check = supabase.table("eventos").select("id").eq("id", evento_id).execute()
-        if not evento_check.data:
-            raise HTTPException(status_code=404, detail="El evento no existe.")
-
-        # Construimos la consulta base al directorio de participantes incluyendo la relación de asistencia
-        # El Join se realiza de forma automática mediante la API PostgREST de Supabase
-        base_query = supabase.table("participantes").select(
-            "id, nombre, correo, whatsapp, profesion, asistencias(asistio, hora_acreditacion)"
-        )
-
-        if query.strip() == "":
-            response = base_query.order("nombre", desc=False).limit(100).execute()
-        else:
-            search_pattern = f"%{query}%"
-            # Filtro usando lógica OR para ID, nombre o correo (equivalente a ILIKE en SQL)
-            response = base_query.or_(
+        # 1. Obtener participantes
+        base_query = supabase.table("participantes").select("*")
+        if query.strip():
+            search_pattern = f"%{query.strip()}%"
+            base_query = base_query.or_(
                 f"id.ilike.{search_pattern},nombre.ilike.{search_pattern},correo.ilike.{search_pattern}"
-            ).order("nombre", desc=False).execute()
+            )
         
-        # Formateamos la respuesta para que la estructura JSON sea idéntica a la que espera el Frontend
-        resultados = []
-        for p in response.data:
-            # Buscamos si el participante tiene una asistencia registrada para ESTE evento específico
-            asistencia_evento = [a for a in p.get("asistencias", []) if a.get("evento_id") == evento_id]
-            
-            asistio = 0
-            hora_acreditacion = None
-            if asistencia_evento:
-                asistio = asistencia_evento[0].get("asistio", 0)
-                hora_acreditacion = asistencia_evento[0].get("hora_acreditacion")
+        participantes_res = base_query.order("nombre", desc=False).limit(100).execute()
+        participantes = participantes_res.data or []
 
+        # 2. Obtener las asistencias para este evento específico
+        asistencias_res = supabase.table("asistencias")\
+            .select("*")\
+            .eq("evento_id", evento_id)\
+            .execute()
+        
+        # Crear un mapa rápido {participante_id: registro_asistencia}
+        asistencias_map = {a["participante_id"]: a for a in (asistencias_res.data or [])}
+
+        # 3. Combinar datos
+        resultados = []
+        for p in participantes:
+            asistencia = asistencias_map.get(p["id"])
             resultados.append({
                 "id": p["id"],
                 "nombre": p["nombre"],
-                "correo": p["correo"],
-                "whatsapp": p["whatsapp"],
-                "profesion": p["profesion"],
-                "asistio": asistio,
-                "hora_acreditacion": hora_acreditacion
+                "correo": p.get("correo") or p.get("correo_registro"),
+                "whatsapp": p.get("whatsapp"),
+                "profesion": p.get("profesion"),
+                "asistio": asistencia["asistio"] if asistencia else 0,
+                "hora_acreditacion": asistencia["hora_acreditacion"] if asistencia else None
             })
             
         return resultados
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la búsqueda de participantes: {e}")
 
+
 @app.post("/eventos/{evento_id}/acreditar/{participante_id}", tags=["Acreditación"])
 def acreditar_participante(evento_id: int, participante_id: str):
     """Marca la asistencia en tiempo real de un participante."""
     try:
-        # Calculamos la hora local de Colombia (UTC-5) usando Python
+        # Hora local de Colombia (UTC-5)
         hora_colombia = (datetime.utcnow() - timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S')
 
-        # Verificamos si ya existe un registro de asistencia previo
-        check = supabase.table("asistencias").select("asistio")\
-            .eq("evento_id", evento_id)\
-            .eq("participante_id", participante_id).execute()
+        # Usar upsert para insertar o actualizar en un solo paso
+        payload = {
+            "evento_id": evento_id,
+            "participante_id": participante_id,
+            "asistio": 1,
+            "hora_acreditacion": hora_colombia
+        }
         
-        if check.data:
-            # Si existe, actualizamos el estado
-            supabase.table("asistencias").update({
-                "asistio": 1,
-                "hora_acreditacion": hora_colombia
-            }).eq("evento_id", evento_id).eq("participante_id", participante_id).execute()
-        else:
-            # Si no existe, creamos el registro de asistencia en caliente
-            supabase.table("asistencias").insert({
-                "evento_id": evento_id,
-                "participante_id": participante_id,
-                "asistio": 1,
-                "hora_acreditacion": hora_colombia
-            }).execute()
+        supabase.table("asistencias").upsert(payload).execute()
             
-        return {"status": "success", "message": "Acreditación exitosa"}
+        return {"status": "success", "message": "Acreditación exitosa", "hora_acreditacion": hora_colombia}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la acreditación: {e}")
-
 
 # 7. MÓDULO DE CREACIÓN/MODIFICACIÓN INDIVIDUAL DE PARTICIPANTES (DML)
 @app.post("/participantes", tags=["Directorio Maestro"])
