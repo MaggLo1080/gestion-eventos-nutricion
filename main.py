@@ -32,15 +32,25 @@ app.add_middleware(
 
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
 def cargar_excel_inicial():
-    """Carga o actualiza los participantes del CSV siempre al iniciar la app."""
+    """Carga o actualiza los participantes del CSV soportando codificación de Excel."""
     try:
         archivo_path = "participantes.csv"
         
         if os.path.exists(archivo_path):
-            with open(archivo_path, mode="r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
+            # Probar primero utf-8-sig, si falla intentar con latin-1
+            contenido = None
+            for encoding in ["utf-8-sig", "latin-1", "cp1252"]:
+                try:
+                    with open(archivo_path, mode="r", encoding=encoding) as f:
+                        reader = list(csv.DictReader(f))
+                        contenido = reader
+                        break
+                except UnicodeDecodeError:
+                    continue
+
+            if contenido:
                 registros = []
-                for row in reader:
+                for row in contenido:
                     cedula = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
                     nombre = row.get("Nombre Completo") or row.get("nombre") or ""
                     correo_reg = row.get("Endereço de e-mail") or row.get("correo_registro") or ""
@@ -65,6 +75,7 @@ def cargar_excel_inicial():
                     print(f"Cargados/Actualizados {len(registros)} participantes exitosamente desde el archivo CSV.")
     except Exception as e:
         print(f"Aviso al cargar CSV inicial: {e}")
+
 
 # Ejecutamos la carga al iniciar la API
 cargar_excel_inicial()
