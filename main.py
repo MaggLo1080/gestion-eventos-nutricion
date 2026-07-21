@@ -1,4 +1,5 @@
 import os
+import csv
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,14 +29,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. RUTA PRINCIPAL (Sirve la interfaz web)
+
+# 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
+def cargar_excel_inicial():
+    """Carga los participantes del archivo CSV a Supabase si la tabla está vacía."""
+    try:
+        # Verificar si la tabla de participantes ya tiene datos
+        check = supabase.table("participantes").select("id", count="exact").limit(1).execute()
+        if check.count and check.count > 0:
+            print("La base de datos de participantes ya contiene registros.")
+            return
+
+        # Busca el archivo CSV en el directorio raíz del proyecto
+        archivo_path = "participantes.csv"  # Asegúrate de que tu archivo se llame así en el repositorio
+        
+        if os.path.exists(archivo_path):
+            with open(archivo_path, mode="r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                registros = []
+                for row in reader:
+                    registros.append({
+                        "id": str(row.get("id") or row.get("cedula") or row.get("documento") or "").strip(),
+                        "nombre": str(row.get("nombre", "")).strip(),
+                        "correo_registro": str(row.get("correo_registro", "")).strip(),
+                        "correo": str(row.get("correo", "")).strip(),
+                        "whatsapp": str(row.get("whatsapp", "")).strip(),
+                        "profesion": str(row.get("profesion", "")).strip(),
+                        "marca_tiempo": str(row.get("marca_tiempo", "")).strip()
+                    })
+                
+                # Insertar en lotes a Supabase
+                if registros:
+                    supabase.table("participantes").upsert(registros).execute()
+                    print(f"Cargados {len(registros)} participantes exitosamente desde el archivo CSV.")
+    except Exception as e:
+        print(f"Aviso al cargar CSV inicial: {e}")
+
+# Ejecutamos la carga al iniciar la API
+cargar_excel_inicial()
+
+
+# 4. RUTA PRINCIPAL (Sirve la interfaz web)
 @app.get("/", include_in_schema=False)
 def index_web():
     """Sirve la interfaz gráfica en el navegador."""
     return FileResponse(os.path.join("templates", "index.html"))
 
 
-# 4. MODELOS DE DATOS (Validaciones de entrada)
+# 5. MODELOS DE DATOS (Validaciones de entrada)
 class EventoCrear(BaseModel):
     nombre: str
     fecha: str  # Formato YYYY-MM-DD
@@ -51,7 +92,7 @@ class ParticipanteCrear(BaseModel):
     marca_tiempo: Optional[str] = None
 
 
-# 5. MÓDULO DE GESTIÓN DE EVENTOS
+# 6. MÓDULO DE GESTIÓN DE EVENTOS
 @app.post("/eventos", tags=["Eventos"])
 def crear_evento(evento: EventoCrear):
     """Crea un nuevo evento en el sistema."""
@@ -61,7 +102,6 @@ def crear_evento(evento: EventoCrear):
             "fecha": evento.fecha,
             "descripcion": evento.descripcion
         }
-        # Insertamos y solicitamos que devuelva la fila creada para capturar el ID
         response = supabase.table("eventos").insert(data).execute()
         
         if not response.data:
@@ -82,7 +122,7 @@ def listar_eventos():
         raise HTTPException(status_code=500, detail=f"Error al listar eventos: {e}")
 
 
-# 6. MÓDULO DE ACREDITACIÓN Y BÚSQUEDA OPTIMIZADA
+# 7. MÓDULO DE ACREDITACIÓN Y BÚSQUEDA OPTIMIZADA
 @app.get("/eventos/{evento_id}/buscar", tags=["Acreditación"])
 def buscar_participantes_evento(evento_id: int, query: str = ""):
     """Busca participantes y mapea su estado de asistencia para un evento específico."""
@@ -147,7 +187,8 @@ def acreditar_participante(evento_id: int, participante_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la acreditación: {e}")
 
-# 7. MÓDULO DE CREACIÓN/MODIFICACIÓN INDIVIDUAL DE PARTICIPANTES (DML)
+
+# 8. MÓDULO DE CREACIÓN/MODIFICACIÓN INDIVIDUAL DE PARTICIPANTES (DML)
 @app.post("/participantes", tags=["Directorio Maestro"])
 def crear_o_actualizar_participante(participante: ParticipanteCrear):
     """Inserta un nuevo participante en caliente o actualiza sus datos existentes."""
@@ -162,7 +203,6 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
             "marca_tiempo": participante.marca_tiempo
         }
         
-        # En el SDK oficial de Supabase, "upsert" resuelve de forma nativa el ON CONFLICT (id)
         supabase.table("participantes").upsert(data).execute()
         return {"status": "success", "message": "Participante guardado correctamente"}
     except Exception as e:
