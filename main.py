@@ -32,7 +32,7 @@ app.add_middleware(
 
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
 def cargar_excel_inicial():
-    """Carga los participantes del archivo CSV a Supabase si la tabla está vacía."""
+    """Carga los participantes del archivo CSV a Supabase reconociendo los encabezados del Excel."""
     try:
         # Verificar si la tabla de participantes ya tiene datos
         check = supabase.table("participantes").select("id", count="exact").limit(1).execute()
@@ -40,25 +40,33 @@ def cargar_excel_inicial():
             print("La base de datos de participantes ya contiene registros.")
             return
 
-        # Busca el archivo CSV en el directorio raíz del proyecto
-        archivo_path = "participantes.csv"  # Asegúrate de que tu archivo se llame así en el repositorio
+        archivo_path = "participantes.csv"
         
         if os.path.exists(archivo_path):
             with open(archivo_path, mode="r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
                 registros = []
                 for row in reader:
-                    registros.append({
-                        "id": str(row.get("id") or row.get("cedula") or row.get("documento") or "").strip(),
-                        "nombre": str(row.get("nombre", "")).strip(),
-                        "correo_registro": str(row.get("correo_registro", "")).strip(),
-                        "correo": str(row.get("correo", "")).strip(),
-                        "whatsapp": str(row.get("whatsapp", "")).strip(),
-                        "profesion": str(row.get("profesion", "")).strip(),
-                        "marca_tiempo": str(row.get("marca_tiempo", "")).strip()
-                    })
+                    # Mapeo directo de las columnas de tu imagen
+                    cedula = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
+                    nombre = row.get("Nombre Completo") or row.get("nombre") or ""
+                    correo_reg = row.get("Endereço de e-mail") or row.get("correo_registro") or ""
+                    correo = row.get("Correo electrónico") or row.get("correo") or ""
+                    whatsapp = row.get("WhatsApp") or row.get("whatsapp") or ""
+                    profesion = row.get("Profesión") or row.get("profesion") or ""
+                    marca_tiempo = row.get("Carimbo de data/hora") or row.get("marca_tiempo") or ""
+
+                    if cedula.strip():  # Solo procesa filas que tengan una cédula válida
+                        registros.append({
+                            "id": str(cedula).strip(),
+                            "nombre": str(nombre).strip(),
+                            "correo_registro": str(correo_reg).strip(),
+                            "correo": str(correo).strip(),
+                            "whatsapp": str(whatsapp).strip(),
+                            "profesion": str(profesion).strip(),
+                            "marca_tiempo": str(marca_tiempo).strip()
+                        })
                 
-                # Insertar en lotes a Supabase
                 if registros:
                     supabase.table("participantes").upsert(registros).execute()
                     print(f"Cargados {len(registros)} participantes exitosamente desde el archivo CSV.")
