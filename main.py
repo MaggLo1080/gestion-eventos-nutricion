@@ -32,14 +32,8 @@ app.add_middleware(
 
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
 def cargar_excel_inicial():
-    """Carga los participantes del archivo CSV a Supabase reconociendo los encabezados del Excel."""
+    """Carga o actualiza los participantes del CSV siempre al iniciar la app."""
     try:
-        # Verificar si la tabla de participantes ya tiene datos
-        check = supabase.table("participantes").select("id", count="exact").limit(1).execute()
-        if check.count and check.count > 0:
-            print("La base de datos de participantes ya contiene registros.")
-            return
-
         archivo_path = "participantes.csv"
         
         if os.path.exists(archivo_path):
@@ -47,7 +41,6 @@ def cargar_excel_inicial():
                 reader = csv.DictReader(f)
                 registros = []
                 for row in reader:
-                    # Mapeo directo de las columnas de tu imagen
                     cedula = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
                     nombre = row.get("Nombre Completo") or row.get("nombre") or ""
                     correo_reg = row.get("Endereço de e-mail") or row.get("correo_registro") or ""
@@ -56,7 +49,7 @@ def cargar_excel_inicial():
                     profesion = row.get("Profesión") or row.get("profesion") or ""
                     marca_tiempo = row.get("Carimbo de data/hora") or row.get("marca_tiempo") or ""
 
-                    if cedula.strip():  # Solo procesa filas que tengan una cédula válida
+                    if str(cedula).strip():
                         registros.append({
                             "id": str(cedula).strip(),
                             "nombre": str(nombre).strip(),
@@ -69,7 +62,7 @@ def cargar_excel_inicial():
                 
                 if registros:
                     supabase.table("participantes").upsert(registros).execute()
-                    print(f"Cargados {len(registros)} participantes exitosamente desde el archivo CSV.")
+                    print(f"Cargados/Actualizados {len(registros)} participantes exitosamente desde el archivo CSV.")
     except Exception as e:
         print(f"Aviso al cargar CSV inicial: {e}")
 
