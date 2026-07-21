@@ -37,7 +37,6 @@ def cargar_excel_inicial():
         archivo_path = "participantes.csv"
         
         if os.path.exists(archivo_path):
-            # Probar primero utf-8-sig, si falla intentar con latin-1
             contenido = None
             for encoding in ["utf-8-sig", "latin-1", "cp1252"]:
                 try:
