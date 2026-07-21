@@ -218,3 +218,21 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
         return {"status": "success", "message": "Participante guardado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
+
+from fastapi import HTTPException, status
+
+@app.delete("/eventos/{evento_id}")
+def eliminar_evento(evento_id: int):
+    try:
+        # 1. Elimina asistencias asociadas al evento
+        supabase.table("asistencias").delete().eq("evento_id", evento_id).execute()
+        
+        # 2. Elimina el evento
+        respuesta = supabase.table("eventos").delete().eq("id", evento_id).execute()
+        
+        return {"mensaje": f"Evento {evento_id} eliminado exitosamente."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar el evento: {str(e)}"
+        )
