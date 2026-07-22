@@ -331,9 +331,14 @@
                     ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">✓ Presente (${p.hora_acreditacion ? p.hora_acreditacion.split(' ')[1] : ''})</span>`
                     : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">⏳ Pendiente</span>`;
 
+                // Botón de Acreditar o Desmarcar según estado
                 const btnAcreditar = p.asistio
-                    ? `<button disabled class="bg-slate-100 text-slate-400 px-3 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed border border-slate-200">Acreditado</button>`
-                    : `<button onclick="acreditarParticipante('${p.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">Marcar Asistencia</button>`;
+                    ? `<button onclick="desmarcarParticipante('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-amber-300 flex items-center gap-1" title="Volver a poner en estado pendiente">
+                        ↩️ Desmarcar
+                       </button>`
+                    : `<button onclick="acreditarParticipante('${p.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
+                        Marcar Asistencia
+                       </button>`;
 
                 fila.innerHTML = `
                     <td class="p-3">
@@ -376,6 +381,20 @@
                 }
             } catch (err) {
                 alert("Error al marcar asistencia");
+            }
+        }
+
+        // 3.1. Desmarcar Asistencia (Volver a Pendiente)
+        async function desmarcarParticipante(id) {
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/acreditar/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    buscarParticipantes();
+                } else {
+                    alert("No se pudo desmarcar la asistencia.");
+                }
+            } catch (err) {
+                alert("Error de conexión al desmarcar la asistencia");
             }
         }
 
@@ -551,6 +570,9 @@
                 errorElem.classList.remove('hidden');
             }
         }
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
