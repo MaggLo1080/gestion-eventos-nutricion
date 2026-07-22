@@ -262,3 +262,21 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
         return {"status": "success", "message": "Participante guardado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
+
+# 9. MÓDULO DE ELIMINACIÓN DE PARTICIPANTES
+@app.delete("/participantes/{participante_id}", tags=["Directorio Maestro"])
+def eliminar_participante(participante_id: str):
+    """Elimina un participante del directorio y todas sus asistencias asociadas."""
+    try:
+        # 1. Elimina asistencias asociadas al participante
+        supabase.table("asistencias").delete().eq("participante_id", participante_id).execute()
+        
+        # 2. Elimina al participante
+        supabase.table("participantes").delete().eq("id", participante_id).execute()
+        
+        return {"status": "success", "message": f"Participante {participante_id} eliminado exitosamente."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar participante: {str(e)}"
+        )
