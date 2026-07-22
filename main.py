@@ -307,13 +307,19 @@ def desmarcar_asistencia(evento_id: str, participante_id: str):
         )
 
 
-# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA (OPTIMIZADO CON HORA DE ACREDITACIÓN)
+# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA (CORREGIDO)
 @app.get("/eventos/{evento_id}/excel", tags=["Acreditación y Asistencia"])
 def descargar_reporte_excel(evento_id: str):
-    """Genera y descarga un archivo Excel completo utilizando openpyxl asegurando la hora de acreditación."""
+    """Genera y descarga un archivo Excel convirtiendo IDs correctamente."""
     try:
+        # Convertir evento_id a entero para consultas en BD
+        try:
+            id_evento_num = int(evento_id)
+        except ValueError:
+            id_evento_num = evento_id
+
         # 1. Obtener los datos del evento
-        res_evento = supabase.table("eventos").select("nombre, fecha").eq("id", evento_id).execute()
+        res_evento = supabase.table("eventos").select("nombre, fecha").eq("id", id_evento_num).execute()
         
         nombre_evento = "Evento"
         fecha_evento = "Reporte"
@@ -321,23 +327,26 @@ def descargar_reporte_excel(evento_id: str):
             nombre_evento = res_evento.data[0].get("nombre", "Evento")
             fecha_evento = res_evento.data[0].get("fecha", "Reporte")
 
-        # 2. Obtener todos los participantes
+        # 2. Obtener todos los participantes registrados
         res_participantes = supabase.table("participantes").select("*").execute()
         participantes = res_participantes.data or []
 
         # 3. Obtener asistencias registradas para este evento
-        res_asistencias = supabase.table("asistencias").select("participante_id, hora_acreditacion").eq("evento_id", evento_id).execute()
+        res_asistencias = supabase.table("asistencias")\
+            .select("participante_id, hora_acreditacion, asistio")\
+            .eq("evento_id", id_evento_num)\
+            .execute()
         
-        # Mapear las asistencias limpiando la cédula/ID para garantizar coincidencia exacta
+        # Mapa de asistencias normalizando la cédula/ID a string sin decimales ni espacios
         mapa_asistencia = {}
         for item in (res_asistencias.data or []):
-            p_id = str(item.get("participante_id") or "").strip().split('.')[0]
-            if p_id:
-                # Extraer la hora o asignar texto por defecto si la columna está null
+            raw_p_id = str(item.get("participante_id") or "").strip().split('.')[0]
+            if raw_p_id:
                 hora_val = item.get("hora_acreditacion")
-                mapa_asistencia[p_id] = str(hora_val).strip() if hora_val else "Acreditado"
+                # Si asistio == 1 o tiene valor, guardamos la hora
+                mapa_asistencia[raw_p_id] = str(hora_val).strip() if hora_val else "Acreditado"
 
-        # 4. Crear el libro Excel con OpenPyXL en memoria
+        # 4. Crear el libro Excel con OpenPyXL
         wb = Workbook()
         ws = wb.active
         ws.title = "Reporte Asistencia"
@@ -355,13 +364,14 @@ def descargar_reporte_excel(evento_id: str):
 
         # Agregar filas
         for p in participantes:
-            id_p = str(p.get("id") or "").strip().split('.')[0]
+            # Normalizar cédula del participante
+            raw_id = str(p.get("id") or "").strip().split('.')[0]
             
-            asistio = id_p in mapa_asistencia
-            hora = mapa_asistencia.get(id_p) if asistio else "-"
+            asistio = raw_id in mapa_asistencia
+            hora = mapa_asistencia.get(raw_id) if asistio else "-"
 
             ws.append([
-                id_p,
+                raw_id,
                 p.get("nombre", ""),
                 p.get("correo") or p.get("correo_registro") or "No registrado",
                 p.get("whatsapp") or "No registrado",
@@ -379,7 +389,7 @@ def descargar_reporte_excel(evento_id: str):
         nombre_limpio = "".join(c for c in nombre_evento if c.isalnum() or c in (' ', '_', '-')).strip()
         filename = f"Reporte_Asistencia_{nombre_limpio}_{fecha_evento}.xlsx"
 
-        # 6. Retornar streaming
+        # 6. Retornar respuesta
         headers = {
             'Content-Disposition': f'attachment; filename="{filename}"',
             'Access-Control-Expose-Headers': 'Content-Disposition'
