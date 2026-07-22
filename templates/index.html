@@ -9,125 +9,150 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
 
-    <!-- Encabezado Principal -->
-    <header class="bg-emerald-700 text-white shadow-md px-6 py-4">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">Centro de Nutrición Funcional</h1>
-                <p class="text-xs text-emerald-100 uppercase tracking-wider font-semibold">Sistema de Gestión de Eventos y Acreditación</p>
+    <!-- MODAL DE AUTENTICACIÓN INICIAL (ACCESO WEB: 1080) -->
+    <div id="modal-acceso" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                🔒
             </div>
-            <!-- Selector de Evento Activo y Acciones -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <label class="text-sm font-medium text-emerald-100">Evento Activo:</label>
-                <select id="select-evento" onchange="cambiarEvento()" class="bg-emerald-800 border border-emerald-600 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
-                    <option value="">Cargando eventos...</option>
-                </select>
-                <button onclick="solicitarEliminarEvento()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1" title="Eliminar evento seleccionado">
-                    🗑️ <span class="hidden sm:inline">Eliminar</span>
-                </button>
-                <button onclick="abrirModalEvento()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm">
-                    + Nuevo Evento
-                </button>
-            </div>
-        </div>
-    </header>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Acceso Restringido</h2>
+            <p class="text-xs text-slate-500 mb-6">Ingresa el código de autorización para acceder al Sistema de Gestión.</p>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- PANEL IZQUIERDO: Formulario DML de Participantes -->
-        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-            <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
-                👤 Registro y Modificación
-            </h2>
-            <p class="text-xs text-slate-500 mb-6">Agrega un nuevo participante en caliente o modifica uno seleccionado desde la tabla de búsqueda.</p>
+            <form onsubmit="validarAccesoWeb(event)" class="space-y-4">
+                <div>
+                    <input type="password" id="inputPassAcceso" required placeholder="Contraseña de acceso" autofocus
+                           class="w-full text-center px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-mono tracking-widest">
+                </div>
+                <p id="errorPassAcceso" class="text-xs text-rose-600 font-semibold hidden">Contraseña incorrecta. Inténtalo de nuevo.</p>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-md">
+                    Ingresar al Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL DE LA APP -->
+    <div id="app-content" class="hidden">
+        <!-- Encabezado Principal -->
+        <header class="bg-emerald-700 text-white shadow-md px-6 py-4">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Centro de Nutrición Funcional</h1>
+                    <p class="text-xs text-emerald-100 uppercase tracking-wider font-semibold">Sistema de Gestión de Eventos y Acreditación</p>
+                </div>
+                <!-- Selector de Evento Activo y Acciones -->
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <label class="text-sm font-medium text-emerald-100">Evento Activo:</label>
+                    <select id="select-evento" onchange="cambiarEvento()" class="bg-emerald-800 border border-emerald-600 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <option value="">Cargando eventos...</option>
+                    </select>
+                    <button onclick="solicitarEliminarEvento()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1" title="Eliminar evento seleccionado">
+                        🗑️ <span class="hidden sm:inline">Eliminar Evento</span>
+                    </button>
+                    <button onclick="abrirModalEvento()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm">
+                        + Nuevo Evento
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <form id="form-participante" class="space-y-4" onsubmit="guardarParticipante(event)">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Cédula de Ciudadanía *</label>
-                    <input type="text" id="part-id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre Completo *</label>
-                    <input type="text" id="part-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Correo Electrónico de Contacto</label>
-                    <input type="email" id="part-correo" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">WhatsApp</label>
-                    <input type="text" id="part-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Profesión</label>
-                    <input type="text" id="part-profesion" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+            <!-- PANEL IZQUIERDO: Formulario DML de Participantes -->
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    👤 Registro y Modificación
+                </h2>
+                <p class="text-xs text-slate-500 mb-6">Agrega un nuevo participante en caliente o modifica uno seleccionado desde la tabla de búsqueda.</p>
+                
+                <form id="form-participante" class="space-y-4" onsubmit="guardarParticipante(event)">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Cédula de Ciudadanía *</label>
+                        <input type="text" id="part-id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre Completo *</label>
+                        <input type="text" id="part-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Correo Electrónico de Contacto</label>
+                        <input type="email" id="part-correo" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">WhatsApp</label>
+                        <input type="text" id="part-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Profesión</label>
+                        <input type="text" id="part-profesion" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm shadow">
+                            Guardar / Actualizar
+                        </button>
+                        <button type="button" onclick="limpiarFormulario()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-3 rounded-lg transition-colors text-sm border border-slate-200">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- PANEL DERECHO: Buscador, Control de Asistencia y Reportes -->
+            <section class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-700">🔍 Control de Asistencia en Tiempo Real</h2>
+                        <p class="text-xs text-slate-400">Busca participantes y registra su check-in para el evento activo.</p>
+                    </div>
+                    <!-- Contadores del Evento -->
+                    <div class="grid grid-cols-3 gap-4 text-center bg-slate-50 p-3 rounded-xl border border-slate-100 w-full sm:w-auto">
+                        <div>
+                            <span id="contador-total" class="text-xl font-extrabold text-slate-700 block">0</span>
+                            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Registrados</span>
+                        </div>
+                        <div>
+                            <span id="contador-asistieron" class="text-xl font-extrabold text-emerald-600 block">0</span>
+                            <span class="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Asistidos</span>
+                        </div>
+                        <div>
+                            <span id="contador-faltantes" class="text-xl font-extrabold text-rose-500 block">0</span>
+                            <span class="text-[10px] text-rose-500 uppercase font-bold tracking-wider">Faltantes</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm shadow">
-                        Guardar / Actualizar
-                    </button>
-                    <button type="button" onclick="limpiarFormulario()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-3 rounded-lg transition-colors text-sm border border-slate-200">
-                        Limpiar
-                    </button>
+                <!-- Barra de búsqueda dinámica -->
+                <div class="relative mb-6">
+                    <input type="text" id="buscador" oninput="buscarParticipantes()" placeholder="Escribe cédula, nombre completo o correo para buscar..." 
+                           class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-sm">
+                    <span class="absolute left-3.5 top-3.5 text-slate-400">🔎</span>
                 </div>
-            </form>
-        </section>
 
-        <!-- PANEL DERECHO: Buscador, Control de Asistencia y Reportes -->
-        <section class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-700">🔍 Control de Asistencia en Tiempo Real</h2>
-                    <p class="text-xs text-slate-400">Busca participantes y registra su check-in para el evento activo.</p>
+                <!-- Tabla de Resultados -->
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold uppercase text-xs border-b border-slate-200">
+                                <th class="p-3">Participante</th>
+                                <th class="p-3">Profesión / Celular</th>
+                                <th class="p-3">Estado</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-resultados" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="4" class="p-8 text-center text-slate-400 italic">
+                                    Por favor ingresa la clave de acceso.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <!-- Contadores del Evento -->
-                <div class="grid grid-cols-3 gap-4 text-center bg-slate-50 p-3 rounded-xl border border-slate-100 w-full sm:w-auto">
-                    <div>
-                        <span id="contador-total" class="text-xl font-extrabold text-slate-700 block">0</span>
-                        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Registrados</span>
-                    </div>
-                    <div>
-                        <span id="contador-asistieron" class="text-xl font-extrabold text-emerald-600 block">0</span>
-                        <span class="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Asistidos</span>
-                    </div>
-                    <div>
-                        <span id="contador-faltantes" class="text-xl font-extrabold text-rose-500 block">0</span>
-                        <span class="text-[10px] text-rose-500 uppercase font-bold tracking-wider">Faltantes</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Barra de búsqueda dinámica -->
-            <div class="relative mb-6">
-                <input type="text" id="buscador" oninput="buscarParticipantes()" placeholder="Escribe cédula, nombre completo o correo para buscar..." 
-                       class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-sm">
-                <span class="absolute left-3.5 top-3.5 text-slate-400">🔎</span>
-            </div>
+            </section>
 
-            <!-- Tabla de Resultados -->
-            <div class="overflow-x-auto flex-grow">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-slate-100 text-slate-600 font-bold uppercase text-xs border-b border-slate-200">
-                            <th class="p-3">Participante</th>
-                            <th class="p-3">Profesión / Celular</th>
-                            <th class="p-3">Estado</th>
-                            <th class="p-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-resultados" class="divide-y divide-slate-100">
-                        <tr>
-                            <td colspan="4" class="p-8 text-center text-slate-400 italic">
-                                Por favor selecciona o crea un evento arriba para iniciar.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-    </main>
+        </main>
+    </div>
 
     <!-- MODAL PARA CREAR NUEVO EVENTO -->
     <div id="modal-evento" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
@@ -158,37 +183,71 @@
         </div>
     </div>
 
-    <!-- MODAL PARA ELIMINAR EVENTO CON CLAVE -->
-    <div id="modal-eliminar" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <!-- MODAL PARA ELIMINAR EVENTO (CLAVE 1080) -->
+    <div id="modal-eliminar-evento" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
             <h3 class="text-lg font-bold text-rose-600 mb-2">🗑️ Eliminar Evento</h3>
             <p class="text-sm text-slate-600 mb-4">Esta acción eliminará el evento seleccionado y todas sus asistencias registradas. Ingresa la contraseña de autorización:</p>
             
-            <input type="password" id="inputPassEliminar" placeholder="Contraseña de autorización" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm mb-2">
-            <p id="errorPassEliminar" class="text-xs text-rose-600 font-semibold hidden mb-3">Contraseña incorrecta.</p>
+            <input type="password" id="inputPassEliminarEvento" placeholder="Contraseña de autorización" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm mb-2">
+            <p id="errorPassEliminarEvento" class="text-xs text-rose-600 font-semibold hidden mb-3">Contraseña incorrecta.</p>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="cerrarModalEliminar()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                <button type="button" onclick="cerrarModalEliminarEvento()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
                     Cancelar
                 </button>
-                <button type="button" onclick="confirmarEliminacion()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
-                    Eliminar
+                <button type="button" onclick="confirmarEliminacionEvento()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                    Eliminar Evento
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- LÓGICA DE CONEXIÓN FRONTEND-BACKEND (APIs) -->
+    <!-- MODAL PARA ELIMINAR PARTICIPANTE/ASISTENTE (CLAVE 1122) -->
+    <div id="modal-eliminar-participante" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
+            <h3 class="text-lg font-bold text-rose-600 mb-2">👤 Eliminar Participante</h3>
+            <p class="text-sm text-slate-600 mb-2">¿Estás seguro de eliminar a <span id="nombreParticipanteEliminar" class="font-bold text-slate-800"></span>?</p>
+            <p class="text-xs text-slate-500 mb-4">Esta acción removerá al participante del directorio maestro y eliminará sus asistencias. Ingresa la clave de seguridad (1122):</p>
+            
+            <input type="password" id="inputPassEliminarPart" placeholder="Código de seguridad (1122)" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm mb-2 font-mono">
+            <p id="errorPassEliminarPart" class="text-xs text-rose-600 font-semibold hidden mb-3">Código de seguridad incorrecto.</p>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalEliminarParticipante()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" onclick="confirmarEliminacionParticipante()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                    Eliminar Registrado
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LÓGICA FRONTEND DE AUTENTICACIÓN Y APIS -->
     <script>
         const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://127.0.0.1:8000"
             : window.location.origin;
-        let eventoSeleccionadoId = null;
 
-        // Carga Inicial al abrir la app
-        window.addEventListener('DOMContentLoaded', () => {
-            obtenerEventos();
-        });
+        let eventoSeleccionadoId = null;
+        let participanteAEliminarId = null;
+
+        // 0. CONTROL DE AUTENTICACIÓN INICIAL DE LA WEB (CLAVE: 1080)
+        function validarAccesoWeb(event) {
+            event.preventDefault();
+            const pass = document.getElementById('inputPassAcceso').value.trim();
+            const errorElem = document.getElementById('errorPassAcceso');
+
+            if (pass === "1080") {
+                document.getElementById('modal-acceso').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                obtenerEventos();
+            } else {
+                errorElem.classList.remove('hidden');
+                document.getElementById('inputPassAcceso').value = "";
+            }
+        }
 
         // 1. Obtener Historial de Eventos
         async function obtenerEventos() {
@@ -212,7 +271,6 @@
                     select.appendChild(opt);
                 });
 
-                // Seleccionar automáticamente el evento más reciente
                 select.value = eventos[0].id;
                 cambiarEvento();
             } catch (err) {
@@ -225,7 +283,7 @@
             buscarParticipantes();
         }
 
-        // 2. Buscador Reactivo (Search-as-you-type)
+        // 2. Buscador Reactivo
         async function buscarParticipantes() {
             if (!eventoSeleccionadoId) return;
             const query = document.getElementById('buscador').value;
@@ -243,7 +301,6 @@
             const tbody = document.getElementById('tabla-resultados');
             tbody.innerHTML = '';
             
-            // Inicializar contadores
             let totalRegistrados = participantes.length;
             let countAsistentes = 0;
 
@@ -280,10 +337,13 @@
                     </td>
                     <td class="p-3">${badge}</td>
                     <td class="p-3 text-center">
-                        <div class="flex justify-center gap-2">
+                        <div class="flex justify-center items-center gap-1.5">
                             ${btnAcreditar}
-                            <button onclick="cargarParaEditar(${JSON.stringify(p).replace(/"/g, '&quot;')})" class="text-slate-500 hover:text-emerald-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-emerald-200 bg-white">
-                                ✏️ Editar
+                            <button onclick="cargarParaEditar(${JSON.stringify(p).replace(/"/g, '&quot;')})" class="text-slate-500 hover:text-emerald-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-emerald-200 bg-white" title="Editar datos">
+                                ✏️
+                            </button>
+                            <button onclick="solicitarEliminarParticipante('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-rose-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-rose-200 bg-white" title="Eliminar participante">
+                                🗑️
                             </button>
                         </div>
                     </td>
@@ -291,10 +351,8 @@
                 tbody.appendChild(fila);
             });
 
-            // Calcular no asistidos (Faltantes)
             let countFaltantes = totalRegistrados - countAsistentes;
 
-            // Actualizar los contadores en la interfaz gráfica
             document.getElementById('contador-total').textContent = totalRegistrados;
             document.getElementById('contador-asistieron').textContent = countAsistentes;
             document.getElementById('contador-faltantes').textContent = countFaltantes;
@@ -312,7 +370,7 @@
             }
         }
 
-        // 4. Modificar / Registrar Participante (DML)
+        // 4. Modificar / Registrar Participante
         async function guardarParticipante(event) {
             event.preventDefault();
             const payload = {
@@ -345,7 +403,7 @@
 
         function cargarParaEditar(p) {
             document.getElementById('part-id').value = p.id;
-            document.getElementById('part-id').readOnly = true; // No modificar la llave primaria (cédula)
+            document.getElementById('part-id').readOnly = true;
             document.getElementById('part-id').classList.add('bg-slate-100', 'cursor-not-allowed');
             document.getElementById('part-nombre').value = p.nombre;
             document.getElementById('part-correo').value = p.correo || '';
@@ -359,7 +417,7 @@
             document.getElementById('part-id').classList.remove('bg-slate-100', 'cursor-not-allowed');
         }
 
-        // 5. Gestión de Nuevos Eventos (DDL/DML lógico)
+        // 5. Gestión de Eventos
         function abrirModalEvento() { document.getElementById('modal-evento').classList.remove('hidden'); }
         function cerrarModalEvento() { document.getElementById('modal-evento').classList.add('hidden'); }
 
@@ -388,24 +446,24 @@
             }
         }
 
-        // 6. Eliminar Eventos con Contraseña
+        // 6. Eliminar Evento con Contraseña (1080)
         function solicitarEliminarEvento() {
             if (!eventoSeleccionadoId) {
                 alert("Por favor selecciona un evento válido para eliminar.");
                 return;
             }
-            document.getElementById('inputPassEliminar').value = "";
-            document.getElementById('errorPassEliminar').classList.add('hidden');
-            document.getElementById('modal-eliminar').classList.remove('hidden');
+            document.getElementById('inputPassEliminarEvento').value = "";
+            document.getElementById('errorPassEliminarEvento').classList.add('hidden');
+            document.getElementById('modal-eliminar-evento').classList.remove('hidden');
         }
 
-        function cerrarModalEliminar() {
-            document.getElementById('modal-eliminar').classList.add('hidden');
+        function cerrarModalEliminarEvento() {
+            document.getElementById('modal-eliminar-evento').classList.add('hidden');
         }
 
-        async function confirmarEliminacion() {
-            const pass = document.getElementById('inputPassEliminar').value.trim();
-            const errorElem = document.getElementById('errorPassEliminar');
+        async function confirmarEliminacionEvento() {
+            const pass = document.getElementById('inputPassEliminarEvento').value.trim();
+            const errorElem = document.getElementById('errorPassEliminarEvento');
 
             if (pass !== "1080") {
                 errorElem.textContent = "Contraseña incorrecta.";
@@ -416,12 +474,10 @@
             if (!eventoSeleccionadoId) return;
 
             try {
-                const res = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}`, {
-                    method: 'DELETE'
-                });
+                const res = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}`, { method: 'DELETE' });
 
                 if (res.ok) {
-                    cerrarModalEliminar();
+                    cerrarModalEliminarEvento();
                     alert("Evento y sus registros de asistencia eliminados con éxito.");
                     obtenerEventos();
                 } else {
@@ -430,14 +486,54 @@
                     errorElem.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error(err);
                 errorElem.textContent = "Error de conexión con el servidor.";
                 errorElem.classList.remove('hidden');
             }
         }
-    </script>
-</body>
-</html>
+
+        // 7. Eliminar Participante con Contraseña (1122)
+        function solicitarEliminarParticipante(id, nombre) {
+            participanteAEliminarId = id;
+            document.getElementById('nombreParticipanteEliminar').textContent = `${nombre} (C.C. ${id})`;
+            document.getElementById('inputPassEliminarPart').value = "";
+            document.getElementById('errorPassEliminarPart').classList.add('hidden');
+            document.getElementById('modal-eliminar-participante').classList.remove('hidden');
+        }
+
+        function cerrarModalEliminarParticipante() {
+            document.getElementById('modal-eliminar-participante').classList.add('hidden');
+            participanteAEliminarId = null;
+        }
+
+        async function confirmarEliminacionParticipante() {
+            const pass = document.getElementById('inputPassEliminarPart').value.trim();
+            const errorElem = document.getElementById('errorPassEliminarPart');
+
+            if (pass !== "1122") {
+                errorElem.textContent = "Código de seguridad incorrecto (1122).";
+                errorElem.classList.remove('hidden');
+                return;
+            }
+
+            if (!participanteAEliminarId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/participantes/${participanteAEliminarId}`, { method: 'DELETE' });
+
+                if (res.ok) {
+                    cerrarModalEliminarParticipante();
+                    alert("Participante eliminado exitosamente.");
+                    buscarParticipantes();
+                } else {
+                    const errData = await res.json();
+                    errorElem.textContent = errData.detail || "Error al eliminar el participante.";
+                    errorElem.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorElem.textContent = "Error de conexión con el servidor.";
+                errorElem.classList.remove('hidden');
+            }
+        }
     </script>
 </body>
 </html>
