@@ -89,9 +89,16 @@ def cargar_excel_inicial():
             registros = list(registros_dict.values())
 
             if registros:
-                # Insertar/Actualizar en lotes en Supabase
-                supabase.table("participantes").upsert(registros).execute()
-                print(f"✅ Cargados/Actualizados {len(registros)} participantes válidos en Supabase.")
+                # Insertar/Actualizar en lotes de 50 para evitar el límite de 100 de Supabase
+                tamano_lote = 50
+                total_cargados = 0
+                
+                for i in range(0, len(registros), tamano_lote):
+                    lote = registros[i:i + tamano_lote]
+                    supabase.table("participantes").upsert(lote).execute()
+                    total_cargados += len(lote)
+                
+                print(f"✅ Cargados/Actualizados {total_cargados} participantes válidos en Supabase (en lotes).")
             else:
                 print("⚠️ No se encontraron registros válidos para cargar.")
 
