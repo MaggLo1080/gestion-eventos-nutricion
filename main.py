@@ -307,10 +307,10 @@ def desmarcar_asistencia(evento_id: str, participante_id: str):
         )
 
 
-# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA (OPTIMIZADO LIGERO)
+# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA (OPTIMIZADO CON HORA DE ACREDITACIÓN)
 @app.get("/eventos/{evento_id}/excel", tags=["Acreditación y Asistencia"])
 def descargar_reporte_excel(evento_id: str):
-    """Genera y descarga un archivo Excel completo utilizando openpyxl para evitar sobrecargar la memoria."""
+    """Genera y descarga un archivo Excel completo utilizando openpyxl asegurando la hora de acreditación."""
     try:
         # 1. Obtener los datos del evento
         res_evento = supabase.table("eventos").select("nombre, fecha").eq("id", evento_id).execute()
@@ -328,11 +328,14 @@ def descargar_reporte_excel(evento_id: str):
         # 3. Obtener asistencias registradas para este evento
         res_asistencias = supabase.table("asistencias").select("participante_id, hora_acreditacion").eq("evento_id", evento_id).execute()
         
-        # Mapear las asistencias por ID (convertido a string para asegurar comparación exacta)
-        mapa_asistencia = {
-            str(item["participante_id"]): item.get("hora_acreditacion", "Sí") 
-            for item in (res_asistencias.data or [])
-        }
+        # Mapear las asistencias limpiando la cédula/ID para garantizar coincidencia exacta
+        mapa_asistencia = {}
+        for item in (res_asistencias.data or []):
+            p_id = str(item.get("participante_id") or "").strip().split('.')[0]
+            if p_id:
+                # Extraer la hora o asignar texto por defecto si la columna está null
+                hora_val = item.get("hora_acreditacion")
+                mapa_asistencia[p_id] = str(hora_val).strip() if hora_val else "Acreditado"
 
         # 4. Crear el libro Excel con OpenPyXL en memoria
         wb = Workbook()
@@ -352,14 +355,15 @@ def descargar_reporte_excel(evento_id: str):
 
         # Agregar filas
         for p in participantes:
-            id_p = str(p.get("id"))
+            id_p = str(p.get("id") or "").strip().split('.')[0]
+            
             asistio = id_p in mapa_asistencia
             hora = mapa_asistencia.get(id_p) if asistio else "-"
 
             ws.append([
                 id_p,
                 p.get("nombre", ""),
-                p.get("correo") or "No registrado",
+                p.get("correo") or p.get("correo_registro") or "No registrado",
                 p.get("whatsapp") or "No registrado",
                 p.get("profesion") or "No definida",
                 "PRESENTE" if asistio else "AUSENTE",
