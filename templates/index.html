@@ -46,10 +46,16 @@
                     <select id="select-evento" onchange="cambiarEvento()" class="bg-emerald-800 border border-emerald-600 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
                         <option value="">Cargando eventos...</option>
                     </select>
+                    
+                    <!-- Botón Exportar a Excel -->
+                    <button onclick="descargarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1.5 border border-emerald-500" title="Descargar reporte completo en Excel">
+                        📊 <span>Exportar Excel</span>
+                    </button>
+
                     <button onclick="solicitarEliminarEvento()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1" title="Eliminar evento seleccionado">
                         🗑️ <span class="hidden sm:inline">Eliminar Evento</span>
                     </button>
-                    <button onclick="abrirModalEvento()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm">
+                    <button onclick="abrirModalEvento()" class="bg-emerald-800 hover:bg-emerald-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm border border-emerald-600">
                         + Nuevo Evento
                     </button>
                 </div>
@@ -331,7 +337,7 @@
                     ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">✓ Presente (${p.hora_acreditacion ? p.hora_acreditacion.split(' ')[1] : ''})</span>`
                     : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">⏳ Pendiente</span>`;
 
-                // Botón de Acreditar o Desmarcar según estado
+                // Botón de Acreditar o Desmarcar según el estado
                 const btnAcreditar = p.asistio
                     ? `<button onclick="desmarcarParticipante('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-amber-300 flex items-center gap-1" title="Volver a poner en estado pendiente">
                         ↩️ Desmarcar
@@ -570,9 +576,15 @@
                 errorElem.classList.remove('hidden');
             }
         }
-    </script>
-</body>
-</html>
+
+        // 8. Descargar Reporte en Excel
+        function descargarExcel() {
+            if (!eventoSeleccionadoId) {
+                alert("Por favor selecciona un evento válido.");
+                return;
+            }
+            window.open(`${API_URL}/eventos/${eventoSeleccionadoId}/excel`, '_blank');
+        }
     </script>
 </body>
 </html>
