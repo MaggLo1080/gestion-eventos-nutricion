@@ -280,3 +280,21 @@ def eliminar_participante(participante_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al eliminar participante: {str(e)}"
         )
+
+# 10. DESMARCAR ASISTENCIA A UN EVENTO
+@app.delete("/eventos/{evento_id}/acreditar/{participante_id}", tags=["Acreditación y Asistencia"])
+def desmarcar_asistencia(evento_id: str, participante_id: str):
+    """Elimina el registro de asistencia de un participante en un evento especifico."""
+    try:
+        supabase.table("asistencias")\
+            .delete()\
+            .eq("evento_id", evento_id)\
+            .eq("participante_id", participante_id)\
+            .execute()
+            
+        return {"status": "success", "message": "Asistencia desmarcada correctamente."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al desmarcar asistencia: {str(e)}"
+        )
