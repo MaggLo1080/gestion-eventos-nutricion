@@ -1,5 +1,7 @@
 import os
 import csv
+import io
+import pandas as pd
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,7 @@ from datetime import datetime, timedelta
 
 # Importamos el cliente HTTP unificado que configuramos previamente
 from database import get_supabase_client
+from fastapi.responses import StreamingResponse
 
 # Inicializamos el cliente oficial de Supabase
 supabase = get_supabase_client()
@@ -297,4 +300,77 @@ def desmarcar_asistencia(evento_id: str, participante_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al desmarcar asistencia: {str(e)}"
+        )
+
+# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA
+@app.get("/eventos/{evento_id}/excel", tags=["Acreditación y Asistencia"])
+def descargar_reporte_excel(evento_id: str):
+    """Genera y descarga un archivo Excel completo con el reporte de asistentes y ausentes del evento."""
+    try:
+        # 1. Obtener los datos del evento
+        res_evento = supabase.table("eventos").select("nombre, fecha").eq("id", evento_id).execute()
+        if not res_evento.data:
+            raise HTTPException(status_code=404, detail="Evento no encontrado")
+        
+        evento = res_evento.data[0]
+        nombre_evento = evento["nombre"]
+        fecha_evento = evento["fecha"]
+
+        # 2. Obtener todos los participantes registrados
+        res_participantes = supabase.table("participantes").select("*").execute()
+        participantes = res_participantes.data or []
+
+        # 3. Obtener asistencias registradas para este evento
+        res_asistencias = supabase.table("asistencias").select("participante_id, hora_acreditacion").eq("evento_id", evento_id).execute()
+        
+        # Mapear las asistencias por id de participante para rápida consulta
+        mapa_asistencia = {
+            item["participante_id"]: item["hora_acreditacion"] 
+            for item in (res_asistencias.data or [])
+        }
+
+        # 4. Construir la lista de datos procesada
+        filas = []
+        for p in participantes:
+            id_p = p.get("id")
+            asistio = id_p in mapa_asistencia
+            hora = mapa_asistencia.get(id_p) if asistio else "-"
+            
+            filas.append({
+                "Cédula": p.get("id"),
+                "Nombre Completo": p.get("nombre"),
+                "Correo Electrónico": p.get("correo") or "No registrado",
+                "WhatsApp": p.get("whatsapp") or "No registrado",
+                "Profesión": p.get("profesion") or "No definida",
+                "Estado de Asistencia": "PRESENTE" if asistio else "AUSENTE",
+                "Hora de Acreditación": hora
+            })
+
+        # 5. Crear el DataFrame de Pandas
+        df = pd.DataFrame(filas)
+
+        # 6. Guardar en memoria usando io.BytesIO
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name="Asistencia")
+        output.seek(0)
+
+        # Sanear el nombre del archivo para la descarga
+        nombre_limpio = "".join(c for c in nombre_evento if c.isalnum() or c in (' ', '_', '-')).rstrip()
+        filename = f"Reporte_Asistencia_{nombre_limpio}_{fecha_evento}.xlsx"
+
+        # 7. Retornar como descarga de archivo
+        headers = {
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+        return StreamingResponse(
+            output, 
+            headers=headers, 
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al generar el archivo Excel: {str(e)}"
         )
