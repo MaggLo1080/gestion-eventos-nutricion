@@ -31,49 +31,72 @@ app.add_middleware(
 
 
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
+import os
+import csv
+from fastapi import HTTPException, status
+
 def cargar_excel_inicial():
-    """Carga o actualiza los participantes del CSV soportando codificación de Excel."""
+    """Carga o actualiza los participantes del CSV soportando la codificación de tu archivo."""
     try:
         archivo_path = "participantes.csv"
         
-        if os.path.exists(archivo_path):
-            contenido = None
-            for encoding in ["utf-8-sig", "latin-1", "cp1252"]:
-                try:
-                    with open(archivo_path, mode="r", encoding=encoding) as f:
-                        reader = list(csv.DictReader(f))
-                        contenido = reader
-                        break
-                except UnicodeDecodeError:
+        if not os.path.exists(archivo_path):
+            print("No se encontró el archivo participantes.csv.")
+            return
+
+        contenido = None
+        # Probamos distintos encodings compatibles con tu archivo
+        for encoding in ["latin-1", "cp1252", "utf-8-sig", "utf-8"]:
+            try:
+                with open(archivo_path, mode="r", encoding=encoding) as f:
+                    reader = list(csv.DictReader(f))
+                    contenido = reader
+                    print(f"CSV leído exitosamente con codificación: {encoding}")
+                    break
+            except (UnicodeDecodeError, Exception):
+                continue
+
+        if contenido:
+            registros_dict = {}  # Usamos un diccionario para eliminar duplicados por Cédula antes de enviar a Supabase
+
+            for row in contenido:
+                # Extraer cédula de forma flexible
+                cedula_raw = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
+                cedula_clean = str(cedula_raw).strip().split('.')[0] # Limpiar espacios y decimales
+
+                # Ignorar filas sin cédula válida
+                if not cedula_clean or cedula_clean.lower() in ["nan", "none", "null", ""]:
                     continue
 
-            if contenido:
-                registros = []
-                for row in contenido:
-                    cedula = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
-                    nombre = row.get("Nombre Completo") or row.get("nombre") or ""
-                    correo_reg = row.get("Endereço de e-mail") or row.get("correo_registro") or ""
-                    correo = row.get("Correo electrónico") or row.get("correo") or ""
-                    whatsapp = row.get("WhatsApp") or row.get("whatsapp") or ""
-                    profesion = row.get("Profesión") or row.get("profesion") or ""
-                    marca_tiempo = row.get("Carimbo de data/hora") or row.get("marca_tiempo") or ""
+                nombre = str(row.get("Nombre Completo") or row.get("nombre") or "").strip()
+                correo_reg = str(row.get("Endereço de e-mail") or row.get("correo_registro") or "").strip()
+                correo = str(row.get("Correo electrónico") or row.get("correo") or "").strip()
+                whatsapp = str(row.get("WhatsApp") or row.get("whatsapp") or "").strip()
+                profesion = str(row.get("Profesión") or row.get("profesion") or "").strip()
+                marca_tiempo = str(row.get("Carimbo de data/hora") or row.get("marca_tiempo") or "").strip()
 
-                    if str(cedula).strip():
-                        registros.append({
-                            "id": str(cedula).strip(),
-                            "nombre": str(nombre).strip(),
-                            "correo_registro": str(correo_reg).strip(),
-                            "correo": str(correo).strip(),
-                            "whatsapp": str(whatsapp).strip(),
-                            "profesion": str(profesion).strip(),
-                            "marca_tiempo": str(marca_tiempo).strip()
-                        })
-                
-                if registros:
-                    supabase.table("participantes").upsert(registros).execute()
-                    print(f"Cargados/Actualizados {len(registros)} participantes exitosamente desde el archivo CSV.")
+                # Guardamos en el diccionario (los registros posteriores actualizarán los anteriores si la cédula se repite)
+                registros_dict[cedula_clean] = {
+                    "id": cedula_clean,
+                    "nombre": nombre if nombre else "Sin Nombre",
+                    "correo_registro": correo_reg if correo_reg else None,
+                    "correo": correo if correo else None,
+                    "whatsapp": whatsapp if whatsapp else None,
+                    "profesion": profesion if profesion else None,
+                    "marca_tiempo": marca_tiempo if marca_tiempo else None
+                }
+
+            registros = list(registros_dict.values())
+
+            if registros:
+                # Insertar/Actualizar en lotes en Supabase
+                supabase.table("participantes").upsert(registros).execute()
+                print(f"✅ Cargados/Actualizados {len(registros)} participantes válidos en Supabase.")
+            else:
+                print("⚠️ No se encontraron registros válidos para cargar.")
+
     except Exception as e:
-        print(f"Aviso al cargar CSV inicial: {e}")
+        print(f"❌ Error al cargar CSV inicial: {e}")
 
 
 # Ejecutamos la carga al iniciar la API
