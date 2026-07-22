@@ -1,17 +1,18 @@
 import os
 import csv
 import io
-import pandas as pd
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 
-# Importamos el cliente HTTP unificado que configuramos previamente
+# Generación ligera de Excel
+from openpyxl import Workbook
+
+# Importamos el cliente HTTP unificado
 from database import get_supabase_client
-from fastapi.responses import StreamingResponse
 
 # Inicializamos el cliente oficial de Supabase
 supabase = get_supabase_client()
@@ -61,7 +62,7 @@ def cargar_excel_inicial():
             for row in contenido:
                 # Extraer cédula de forma flexible
                 cedula_raw = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
-                cedula_clean = str(cedula_raw).strip().split('.')[0] # Limpiar espacios y decimales
+                cedula_clean = str(cedula_raw).strip().split('.')[0]  # Limpiar espacios y decimales
 
                 # Ignorar filas sin cédula válida
                 if not cedula_clean or cedula_clean.lower() in ["nan", "none", "null", ""]:
@@ -184,7 +185,7 @@ def eliminar_evento(evento_id: int):
 def buscar_participantes_evento(evento_id: int, query: str = ""):
     """Busca participantes y mapea su estado de asistencia para un evento específico."""
     try:
-        # 1. Obtener participantes (Incrementado a .limit(1000) para traer la lista completa)
+        # 1. Obtener participantes
         base_query = supabase.table("participantes").select("*")
         if query.strip():
             search_pattern = f"%{query.strip()}%"
@@ -195,7 +196,7 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
         participantes_res = base_query.order("nombre", desc=False).limit(1000).execute()
         participantes = participantes_res.data or []
 
-        # 2. Obtener las asistencias para este evento específico (limitado a 1000)
+        # 2. Obtener las asistencias para este evento específico
         asistencias_res = supabase.table("asistencias")\
             .select("*")\
             .eq("evento_id", evento_id)\
@@ -203,12 +204,13 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
             .execute()
         
         # Crear un mapa rápido {participante_id: registro_asistencia}
-        asistencias_map = {a["participante_id"]: a for a in (asistencias_res.data or [])}
+        asistencias_map = {str(a["participante_id"]): a for a in (asistencias_res.data or [])}
 
         # 3. Combinar datos
         resultados = []
         for p in participantes:
-            asistencia = asistencias_map.get(p["id"])
+            id_str = str(p["id"])
+            asistencia = asistencias_map.get(id_str)
             resultados.append({
                 "id": p["id"],
                 "nombre": p["nombre"],
@@ -266,6 +268,7 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
 
+
 # 9. MÓDULO DE ELIMINACIÓN DE PARTICIPANTES
 @app.delete("/participantes/{participante_id}", tags=["Directorio Maestro"])
 def eliminar_participante(participante_id: str):
@@ -283,6 +286,7 @@ def eliminar_participante(participante_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al eliminar participante: {str(e)}"
         )
+
 
 # 10. DESMARCAR ASISTENCIA A UN EVENTO
 @app.delete("/eventos/{evento_id}/acreditar/{participante_id}", tags=["Acreditación y Asistencia"])
@@ -302,66 +306,79 @@ def desmarcar_asistencia(evento_id: str, participante_id: str):
             detail=f"Error al desmarcar asistencia: {str(e)}"
         )
 
-# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA
+
+# 11. DESCARGAR REPORTE EXCEL DE ASISTENCIA (OPTIMIZADO LIGERO)
 @app.get("/eventos/{evento_id}/excel", tags=["Acreditación y Asistencia"])
 def descargar_reporte_excel(evento_id: str):
-    """Genera y descarga un archivo Excel completo con el reporte de asistentes y ausentes del evento."""
+    """Genera y descarga un archivo Excel completo utilizando openpyxl para evitar sobrecargar la memoria."""
     try:
         # 1. Obtener los datos del evento
         res_evento = supabase.table("eventos").select("nombre, fecha").eq("id", evento_id).execute()
-        if not res_evento.data:
-            raise HTTPException(status_code=404, detail="Evento no encontrado")
         
-        evento = res_evento.data[0]
-        nombre_evento = evento["nombre"]
-        fecha_evento = evento["fecha"]
+        nombre_evento = "Evento"
+        fecha_evento = "Reporte"
+        if res_evento.data:
+            nombre_evento = res_evento.data[0].get("nombre", "Evento")
+            fecha_evento = res_evento.data[0].get("fecha", "Reporte")
 
-        # 2. Obtener todos los participantes registrados
+        # 2. Obtener todos los participantes
         res_participantes = supabase.table("participantes").select("*").execute()
         participantes = res_participantes.data or []
 
         # 3. Obtener asistencias registradas para este evento
         res_asistencias = supabase.table("asistencias").select("participante_id, hora_acreditacion").eq("evento_id", evento_id).execute()
         
-        # Mapear las asistencias por id de participante para rápida consulta
+        # Mapear las asistencias por ID (convertido a string para asegurar comparación exacta)
         mapa_asistencia = {
-            item["participante_id"]: item["hora_acreditacion"] 
+            str(item["participante_id"]): item.get("hora_acreditacion", "Sí") 
             for item in (res_asistencias.data or [])
         }
 
-        # 4. Construir la lista de datos procesada
-        filas = []
+        # 4. Crear el libro Excel con OpenPyXL en memoria
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Reporte Asistencia"
+
+        # Encabezados
+        ws.append([
+            "Cédula", 
+            "Nombre Completo", 
+            "Correo Electrónico", 
+            "WhatsApp", 
+            "Profesión", 
+            "Estado de Asistencia", 
+            "Hora de Acreditación"
+        ])
+
+        # Agregar filas
         for p in participantes:
-            id_p = p.get("id")
+            id_p = str(p.get("id"))
             asistio = id_p in mapa_asistencia
             hora = mapa_asistencia.get(id_p) if asistio else "-"
-            
-            filas.append({
-                "Cédula": p.get("id"),
-                "Nombre Completo": p.get("nombre"),
-                "Correo Electrónico": p.get("correo") or "No registrado",
-                "WhatsApp": p.get("whatsapp") or "No registrado",
-                "Profesión": p.get("profesion") or "No definida",
-                "Estado de Asistencia": "PRESENTE" if asistio else "AUSENTE",
-                "Hora de Acreditación": hora
-            })
 
-        # 5. Crear el DataFrame de Pandas
-        df = pd.DataFrame(filas)
+            ws.append([
+                id_p,
+                p.get("nombre", ""),
+                p.get("correo") or "No registrado",
+                p.get("whatsapp") or "No registrado",
+                p.get("profesion") or "No definida",
+                "PRESENTE" if asistio else "AUSENTE",
+                hora
+            ])
 
-        # 6. Guardar en memoria usando io.BytesIO
+        # 5. Guardar en buffer de memoria
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name="Asistencia")
+        wb.save(output)
         output.seek(0)
 
-        # Sanear el nombre del archivo para la descarga
-        nombre_limpio = "".join(c for c in nombre_evento if c.isalnum() or c in (' ', '_', '-')).rstrip()
+        # Sanear el nombre del archivo
+        nombre_limpio = "".join(c for c in nombre_evento if c.isalnum() or c in (' ', '_', '-')).strip()
         filename = f"Reporte_Asistencia_{nombre_limpio}_{fecha_evento}.xlsx"
 
-        # 7. Retornar como descarga de archivo
+        # 6. Retornar streaming
         headers = {
-            'Content-Disposition': f'attachment; filename="{filename}"'
+            'Content-Disposition': f'attachment; filename="{filename}"',
+            'Access-Control-Expose-Headers': 'Content-Disposition'
         }
         return StreamingResponse(
             output, 
