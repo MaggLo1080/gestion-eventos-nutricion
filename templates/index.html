@@ -1,753 +1,590 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SGE - Centro de Nutrición Funcional</title>
-  
-  <!-- Tipografía Profesional -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      /* Paleta Oficial Centro de Nutrición Funcional */
-      --brand-red: #FF5263;
-      --brand-green: #99CC00;
-      --brand-dark: #3F426B;
-      --brand-light: #F8FAFC;
-      --brand-surface: #FFFFFF;
-
-      /* Gradiantes */
-      --grad-brand: linear-gradient(135deg, #FF5263 0%, #99CC00 100%);
-      --grad-brand-subtle: linear-gradient(135deg, rgba(255, 82, 99, 0.05) 0%, rgba(153, 204, 0, 0.08) 100%);
-      --grad-hover: linear-gradient(135deg, #E04354 0%, #88B800 100%);
-
-      /* Sombras y Radios */
-      --shadow-sm: 0 2px 8px rgba(63, 66, 107, 0.04);
-      --shadow-md: 0 8px 24px rgba(63, 66, 107, 0.07);
-      --shadow-lg: 0 16px 32px rgba(63, 66, 107, 0.12);
-      --radius-card: 16px;
-      --radius-btn: 12px;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--brand-light);
-      color: var(--brand-dark);
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Top Navigation Glassmorphism */
-    .navbar {
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(63, 66, 107, 0.08);
-      padding: 0.85rem 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .brand-container {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .brand-logo {
-      height: 42px;
-      object-fit: contain;
-    }
-
-    .brand-title {
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: var(--brand-dark);
-      letter-spacing: -0.02em;
-    }
-
-    .brand-tag {
-      font-size: 0.75rem;
-      background: var(--grad-brand-subtle);
-      color: var(--brand-red);
-      font-weight: 700;
-      padding: 0.2rem 0.6rem;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 82, 99, 0.2);
-    }
-
-    /* Main Container */
-    .container {
-      max-width: 1280px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-    }
-
-    /* Top Section Grid */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-
-    @media (max-width: 900px) {
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Custom Card Style */
-    .card {
-      background: var(--brand-surface);
-      border-radius: var(--radius-card);
-      border: 1px solid rgba(63, 66, 107, 0.06);
-      box-shadow: var(--shadow-md);
-      padding: 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: var(--grad-brand);
-    }
-
-    .card-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: var(--brand-dark);
-    }
-
-    /* Controles de Formulario */
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 0.4rem;
-      color: var(--brand-dark);
-    }
-
-    .input-custom, .select-custom {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: var(--radius-btn);
-      border: 1.5px solid rgba(63, 66, 107, 0.15);
-      background-color: #FFFFFF;
-      color: var(--brand-dark);
-      font-size: 0.95rem;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-
-    .input-custom:focus, .select-custom:focus {
-      border-color: var(--brand-red);
-      box-shadow: 0 0 0 4px rgba(255, 82, 99, 0.12);
-    }
-
-    /* Botones */
-    .btn {
-      font-family: inherit;
-      font-weight: 600;
-      padding: 0.75rem 1.25rem;
-      border-radius: var(--radius-btn);
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-
-    .btn-primary {
-      background: var(--grad-brand);
-      color: #FFFFFF;
-      box-shadow: 0 4px 14px rgba(255, 82, 99, 0.25);
-    }
-
-    .btn-primary:hover {
-      background: var(--grad-hover);
-      box-shadow: 0 6px 18px rgba(153, 204, 0, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .btn-excel {
-      background: #107C41;
-      color: #FFFFFF;
-      box-shadow: 0 4px 12px rgba(16, 124, 65, 0.2);
-    }
-
-    .btn-excel:hover {
-      background: #0B5B30;
-      transform: translateY(-1px);
-    }
-
-    .btn-secondary {
-      background: #F1F5F9;
-      color: var(--brand-dark);
-      border: 1px solid rgba(63, 66, 107, 0.1);
-    }
-
-    .btn-secondary:hover {
-      background: #E2E8F0;
-    }
-
-    .btn-toggle {
-      padding: 0.4rem 0.85rem;
-      font-size: 0.82rem;
-      border-radius: 8px;
-    }
-
-    /* Event Summary Counter Card */
-    .summary-box {
-      background: var(--grad-brand-subtle);
-      border-radius: var(--radius-card);
-      padding: 1.25rem;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      margin-top: 1rem;
-      border: 1px solid rgba(153, 204, 0, 0.2);
-    }
-
-    .metric-item {
-      text-align: center;
-    }
-
-    .metric-val {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: var(--brand-dark);
-    }
-
-    .metric-val.presente { color: var(--brand-green); }
-    .metric-val.ausente { color: var(--brand-red); }
-
-    .metric-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      opacity: 0.7;
-    }
-
-    /* Control Bar above Table */
-    .table-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .search-box {
-      flex: 1;
-      min-width: 280px;
-      position: relative;
-    }
-
-    /* Tabla Elegante */
-    .table-container {
-      background: white;
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(63, 66, 107, 0.08);
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    th {
-      background: var(--grad-brand-subtle);
-      color: var(--brand-dark);
-      font-weight: 700;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 1rem 1.2rem;
-      border-bottom: 1px solid rgba(63, 66, 107, 0.08);
-    }
-
-    td {
-      padding: 0.9rem 1.2rem;
-      border-bottom: 1px solid rgba(63, 66, 107, 0.05);
-      font-size: 0.9rem;
-      vertical-align: middle;
-    }
-
-    tr:hover td {
-      background-color: rgba(248, 250, 252, 0.8);
-    }
-
-    /* Badges de Asistencia */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.3rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    .badge-presente {
-      background: rgba(153, 204, 0, 0.15);
-      color: #557300;
-      border: 1px solid rgba(153, 204, 0, 0.3);
-    }
-
-    .badge-ausente {
-      background: rgba(255, 82, 99, 0.1);
-      color: var(--brand-red);
-      border: 1px solid rgba(255, 82, 99, 0.2);
-    }
-
-    /* Modal Estilizado */
-    .modal-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(63, 66, 107, 0.4);
-      backdrop-filter: blur(4px);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-
-    .modal-backdrop.active {
-      display: flex;
-    }
-
-    .modal-content {
-      background: white;
-      border-radius: var(--radius-card);
-      width: 100%;
-      max-width: 500px;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      position: relative;
-    }
-
-    .close-modal {
-      position: absolute;
-      top: 1rem; right: 1rem;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--brand-dark);
-      opacity: 0.5;
-    }
-
-    .close-modal:hover { opacity: 1; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Centro de Nutrición Funcional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
 
-  <!-- HEADER NAVBAR -->
-  <nav class="navbar">
-    <div class="brand-container">
-      <!-- Muestra el logo institucional enviado o fallback textual -->
-      <img src="https://i.ibb.co/vzRkVpB/logo-cnf.png" alt="Logo CNF" class="brand-logo" onerror="this.style.display='none'">
-      <div>
-        <span class="brand-title">Centro de Nutrición Funcional</span>
-        <span class="brand-tag">Acreditación Real-Time</span>
-      </div>
-    </div>
-  </nav>
+    <!-- MODAL DE AUTENTICACIÓN INICIAL (ACCESO WEB: 1080) -->
+    <div id="modal-acceso" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                🔒
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800 mb-1">Acceso Restringido</h2>
+            <p class="text-xs text-slate-500 mb-6">Ingresa el código de autorización para acceder al Sistema de Gestión.</p>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <div class="container">
-    
-    <div class="dashboard-grid">
-      
-      <!-- PANEL 1: Crear Evento -->
-      <div class="card">
-        <h2 class="card-title">➕ Nuevo Evento</h2>
-        <form id="formCrearEvento">
-          <div class="form-group">
-            <label class="form-label">Nombre del Evento</label>
-            <input type="text" id="evNombre" class="input-custom" placeholder="Ej: Simposio de Nutrición 2026" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Fecha</label>
-            <input type="date" id="evFecha" class="input-custom" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Descripción (Opcional)</label>
-            <input type="text" id="evDesc" class="input-custom" placeholder="Sede / Ponente">
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Crear Evento</button>
-        </form>
-      </div>
-
-      <!-- PANEL 2: Selector y Métricas del Evento Activo -->
-      <div class="card">
-        <h2 class="card-title">🎯 Evento Seleccionado</h2>
-        <div class="form-group">
-          <label class="form-label">Selecciona el Evento a Gestionar:</label>
-          <select id="selectEventos" class="select-custom">
-            <option value="">Cargando eventos...</option>
-          </select>
+            <form onsubmit="validarAccesoWeb(event)" class="space-y-4" autocomplete="off">
+                <div>
+                    <input type="password" id="inputPassAcceso" required placeholder="Contraseña de acceso" autofocus autocomplete="new-password" value=""
+                           class="w-full text-center px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-mono tracking-widest">
+                </div>
+                <p id="errorPassAcceso" class="text-xs text-rose-600 font-semibold hidden">Contraseña incorrecta. Inténtalo de nuevo.</p>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-md">
+                    Ingresar al Sistema
+                </button>
+            </form>
         </div>
-
-        <div class="summary-box">
-          <div class="metric-item">
-            <div id="metricTotal" class="metric-val">0</div>
-            <div class="metric-label">Registrados</div>
-          </div>
-          <div class="metric-item">
-            <div id="metricPresentes" class="metric-val presente">0</div>
-            <div class="metric-label">Asistieron</div>
-          </div>
-          <div class="metric-item">
-            <div id="metricAusentes" class="metric-val ausente">0</div>
-            <div class="metric-label">Ausentes</div>
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <!-- BARRA DE BÚSQUEDA Y ACCIONES PRINCIPALES -->
-    <div class="table-controls">
-      <div class="search-box">
-        <input type="text" id="inputBuscar" class="input-custom" placeholder="🔍 Buscar por Cédula, Nombre o Correo...">
-      </div>
-      
-      <div style="display: flex; gap: 0.75rem;">
-        <button id="btnNuevoParticipante" class="btn btn-secondary">
-          👤 Nuevo Participante
-        </button>
-        <button id="btnExportarExcel" class="btn btn-excel">
-          📊 Exportar Reporte Excel
-        </button>
-      </div>
+    <!-- CONTENIDO PRINCIPAL DE LA APP -->
+    <div id="app-content" class="hidden">
+        <!-- Encabezado Principal -->
+        <header class="bg-emerald-700 text-white shadow-md px-6 py-4">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Centro de Nutrición Funcional</h1>
+                    <p class="text-xs text-emerald-100 uppercase tracking-wider font-semibold">Sistema de Gestión de Eventos y Acreditación</p>
+                </div>
+                <!-- Selector de Evento Activo y Acciones -->
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <label class="text-sm font-medium text-emerald-100">Evento Activo:</label>
+                    <select id="select-evento" onchange="cambiarEvento()" class="bg-emerald-800 border border-emerald-600 rounded-lg px-3 py-1.5 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <option value="">Cargando eventos...</option>
+                    </select>
+                    
+                    <!-- Botón Exportar a Excel -->
+                    <button onclick="descargarExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1.5 border border-emerald-500" title="Descargar reporte completo en Excel">
+                        📊 <span>Exportar Excel</span>
+                    </button>
+
+                    <button onclick="solicitarEliminarEvento()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-1" title="Eliminar evento seleccionado">
+                        🗑️ <span class="hidden sm:inline">Eliminar Evento</span>
+                    </button>
+                    <button onclick="abrirModalEvento()" class="bg-emerald-800 hover:bg-emerald-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm border border-emerald-600">
+                        + Nuevo Evento
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- PANEL IZQUIERDO: Formulario DML de Participantes -->
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    👤 Registro y Modificación
+                </h2>
+                <p class="text-xs text-slate-500 mb-6">Agrega un nuevo participante en caliente o modifica uno seleccionado desde la tabla de búsqueda.</p>
+                
+                <form id="form-participante" class="space-y-4" onsubmit="guardarParticipante(event)" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Cédula de Ciudadanía *</label>
+                        <input type="text" id="part-id" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre Completo *</label>
+                        <input type="text" id="part-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Correo Electrónico de Contacto</label>
+                        <input type="email" id="part-correo" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">WhatsApp</label>
+                        <input type="text" id="part-whatsapp" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Profesión</label>
+                        <input type="text" id="part-profesion" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit" class="flex-grow bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm shadow">
+                            Guardar / Actualizar
+                        </button>
+                        <button type="button" onclick="limpiarFormulario()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-3 rounded-lg transition-colors text-sm border border-slate-200">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- PANEL DERECHO: Buscador, Control de Asistencia y Reportes -->
+            <section class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-700">🔍 Control de Asistencia en Tiempo Real</h2>
+                        <p class="text-xs text-slate-400">Busca participantes y registra su check-in para el evento activo.</p>
+                    </div>
+                    <!-- Contadores del Evento -->
+                    <div class="grid grid-cols-3 gap-4 text-center bg-slate-50 p-3 rounded-xl border border-slate-100 w-full sm:w-auto">
+                        <div>
+                            <span id="contador-total" class="text-xl font-extrabold text-slate-700 block">0</span>
+                            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Registrados</span>
+                        </div>
+                        <div>
+                            <span id="contador-asistieron" class="text-xl font-extrabold text-emerald-600 block">0</span>
+                            <span class="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Asistidos</span>
+                        </div>
+                        <div>
+                            <span id="contador-faltantes" class="text-xl font-extrabold text-rose-500 block">0</span>
+                            <span class="text-[10px] text-rose-500 uppercase font-bold tracking-wider">Faltantes</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Barra de búsqueda dinámica -->
+                <div class="relative mb-6">
+                    <input type="text" id="buscador" oninput="buscarParticipantes()" placeholder="Escribe cédula, nombre completo o correo para buscar..." 
+                           class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-sm" autocomplete="off">
+                    <span class="absolute left-3.5 top-3.5 text-slate-400">🔎</span>
+                </div>
+
+                <!-- Tabla de Resultados -->
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold uppercase text-xs border-b border-slate-200">
+                                <th class="p-3">Participante</th>
+                                <th class="p-3">Profesión / Celular</th>
+                                <th class="p-3">Estado</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-resultados" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="4" class="p-8 text-center text-slate-400 italic">
+                                    Por favor ingresa la clave de acceso.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
     </div>
 
-    <!-- TABLA DE PARTICIPANTES Y ACREDITACIÓN -->
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Cédula</th>
-            <th>Nombre Completo</th>
-            <th>Contacto</th>
-            <th>Profesión</th>
-            <th>Estado</th>
-            <th>Hora Acreditación</th>
-            <th style="text-align: center;">Acción</th>
-          </tr>
-        </thead>
-        <tbody id="tablaCuerpo">
-          <tr>
-            <td colspan="7" style="text-align: center; color: #888; padding: 2rem;">
-              Seleccione un evento para cargar la lista de participantes.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- MODAL PARA CREAR NUEVO EVENTO -->
+    <div id="modal-evento" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
+            <h3 class="text-lg font-bold text-slate-700 mb-4">📅 Crear Nuevo Evento</h3>
+            <form onsubmit="guardarEvento(event)" class="space-y-4" autocomplete="off">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nombre del Evento *</label>
+                    <input type="text" id="ev-nombre" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha del Evento *</label>
+                    <input type="date" id="ev-fecha" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Descripción / Notas</label>
+                    <textarea id="ev-descripcion" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="cerrarModalEvento()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                        Crear Evento
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-  </div>
+    <!-- MODAL PARA ELIMINAR EVENTO (CLAVE 1080) -->
+    <div id="modal-eliminar-evento" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
+            <h3 class="text-lg font-bold text-rose-600 mb-2">🗑️ Eliminar Evento</h3>
+            <p class="text-sm text-slate-600 mb-4">Esta acción eliminará el evento seleccionado y todas sus asistencias registradas. Ingresa la contraseña de autorización:</p>
+            
+            <input type="password" id="inputPassEliminarEvento" placeholder="Contraseña de autorización" autocomplete="new-password" value="" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm mb-2">
+            <p id="errorPassEliminarEvento" class="text-xs text-rose-600 font-semibold hidden mb-3">Contraseña incorrecta.</p>
 
-  <!-- MODAL: REGISTRAR NUEVO PARTICIPANTE EN CALIENTE -->
-  <div id="modalParticipante" class="modal-backdrop">
-    <div class="modal-content">
-      <button class="close-modal" id="btnCerrarModal">&times;</button>
-      <h2 class="card-title">👤 Registrar Nuevo Participante</h2>
-      <form id="formNuevoParticipante">
-        <div class="form-group">
-          <label class="form-label">Cédula de Ciudadanía *</label>
-          <input type="text" id="partId" class="input-custom" placeholder="Ej: 119310943" required>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalEliminarEvento()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" onclick="confirmarEliminacionEvento()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                    Eliminar Evento
+                </button>
+            </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Nombre Completo *</label>
-          <input type="text" id="partNombre" class="input-custom" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Correo Electrónico</label>
-          <input type="email" id="partCorreo" class="input-custom">
-        </div>
-        <div class="form-group">
-          <label class="form-label">WhatsApp / Teléfono</label>
-          <input type="text" id="partWhatsapp" class="input-custom">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Profesión</label>
-          <input type="text" id="partProfesion" class="input-custom" placeholder="Ej: Nutricionista">
-        </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Guardar e Inscribir</button>
-      </form>
     </div>
-  </div>
 
-  <!-- SCRIPT LOGIC -->
-  <script>
-    let eventoActualId = null;
-    let debounceTimer = null;
+    <!-- MODAL PARA ELIMINAR PARTICIPANTE/ASISTENTE (CLAVE 1122) -->
+    <div id="modal-eliminar-participante" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 border border-slate-100">
+            <h3 class="text-lg font-bold text-rose-600 mb-2">👤 Eliminar Participante</h3>
+            <p class="text-sm text-slate-600 mb-2">¿Estás seguro de eliminar a <span id="nombreParticipanteEliminar" class="font-bold text-slate-800"></span>?</p>
+            <p class="text-xs text-slate-500 mb-4">Esta acción removerá al participante del directorio maestro y eliminará sus asistencias. Ingresa la clave de seguridad (1122):</p>
+            
+            <input type="password" id="inputPassEliminarPart" placeholder="Código de seguridad (1122)" autocomplete="new-password" value="" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm mb-2 font-mono">
+            <p id="errorPassEliminarPart" class="text-xs text-rose-600 font-semibold hidden mb-3">Código de seguridad incorrecto.</p>
 
-    // Elementos DOM
-    const selectEventos = document.getElementById('selectEventos');
-    const inputBuscar = document.getElementById('inputBuscar');
-    const tablaCuerpo = document.getElementById('tablaCuerpo');
-    const btnExportarExcel = document.getElementById('btnExportarExcel');
-    
-    // Métricas DOM
-    const metricTotal = document.getElementById('metricTotal');
-    const metricPresentes = document.getElementById('metricPresentes');
-    const metricAusentes = document.getElementById('metricAusentes');
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalEliminarParticipante()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" onclick="confirmarEliminacionParticipante()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors shadow">
+                    Eliminar Registrado
+                </button>
+            </div>
+        </div>
+    </div>
 
-    // Inicialización
-    document.addEventListener('DOMContentLoaded', () => {
-      // Establecer fecha de hoy en selector de fecha
-      document.getElementById('evFecha').valueToDate = new Date();
-      document.getElementById('evFecha').value = new Date().toISOString().split('T')[0];
-      
-      cargarEventos();
-    });
+    <!-- LÓGICA FRONTEND DE AUTENTICACIÓN Y APIS -->
+    <script>
+        const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : window.location.origin;
 
-    // 1. Cargar Historial de Eventos
-    async function cargarEventos() {
-      try {
-        const res = await fetch('/eventos');
-        const eventos = await res.json();
-        
-        selectEventos.innerHTML = '';
-        if (eventos.length === 0) {
-          selectEventos.innerHTML = '<option value="">No hay eventos creados</option>';
-          return;
-        }
+        let eventoSeleccionadoId = null;
+        let participanteAEliminarId = null;
 
-        eventos.forEach(ev => {
-          const opt = document.createElement('option');
-          opt.value = ev.id;
-          opt.textContent = `${ev.fecha} - ${ev.nombre}`;
-          selectEventos.appendChild(opt);
+        // Limpieza de claves al cargar la página
+        document.addEventListener("DOMContentLoaded", () => {
+            const passAcceso = document.getElementById('inputPassAcceso');
+            if (passAcceso) passAcceso.value = '';
         });
 
-        // Seleccionar automáticamente el primero
-        eventoActualId = eventos[0].id;
-        cargarParticipantes();
+        // 0. CONTROL DE AUTENTICACIÓN INICIAL DE LA WEB (CLAVE: 1080)
+        function validarAccesoWeb(event) {
+            event.preventDefault();
+            const inputAcceso = document.getElementById('inputPassAcceso');
+            const pass = inputAcceso.value.trim();
+            const errorElem = document.getElementById('errorPassAcceso');
 
-      } catch (err) {
-        console.error("Error al cargar eventos:", err);
-      }
-    }
-
-    // Al cambiar de evento en el select
-    selectEventos.addEventListener('change', (e) => {
-      eventoActualId = e.target.value;
-      if (eventoActualId) cargarParticipantes();
-    });
-
-    // 2. Cargar Lista de Participantes y Acreditación
-    async function cargarParticipantes() {
-      if (!eventoActualId) return;
-
-      const query = inputBuscar.value.trim();
-      try {
-        const res = await fetch(`/eventos/${eventoActualId}/buscar?query=${encodeURIComponent(query)}`);
-        const data = await res.json();
-
-        renderizarTabla(data);
-      } catch (err) {
-        console.error("Error cargando lista de participantes:", err);
-      }
-    }
-
-    // Renderizar Filas de la Tabla
-    function renderizarTabla(lista) {
-      tablaCuerpo.innerHTML = '';
-
-      let total = lista.length;
-      let presentes = 0;
-
-      if (total === 0) {
-        tablaCuerpo.innerHTML = `
-          <tr>
-            <td colspan="7" style="text-align: center; color: #888; padding: 2rem;">
-              No se encontraron participantes.
-            </td>
-          </tr>`;
-        actualizarMetricas(0, 0, 0);
-        return;
-      }
-
-      lista.forEach(p => {
-        const asistio = p.asistio === 1;
-        if (asistio) presentes++;
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${p.id}</strong></td>
-          <td>${p.nombre}</td>
-          <td>
-            <div style="font-size:0.85rem;">${p.correo || '-'}</div>
-            <div style="font-size:0.78rem; color:#666;">${p.whatsapp || ''}</div>
-          </td>
-          <td>${p.profesion || '-'}</td>
-          <td>
-            <span class="badge ${asistio ? 'badge-presente' : 'badge-ausente'}">
-              ${asistio ? '● PRESENTE' : '○ AUSENTE'}
-            </span>
-          </td>
-          <td>${p.hora_acreditacion || '-'}</td>
-          <td style="text-align: center;">
-            ${asistio ? `
-              <button onclick="desmarcarAsistencia('${p.id}')" class="btn btn-secondary btn-toggle">
-                Desmarcar
-              </button>
-            ` : `
-              <button onclick="acreditar('${p.id}')" class="btn btn-primary btn-toggle">
-                Acreditar
-              </button>
-            `}
-          </td>
-        `;
-        tablaCuerpo.appendChild(tr);
-      });
-
-      actualizarMetricas(total, presentes, total - presentes);
-    }
-
-    function actualizarMetricas(tot, pres, aus) {
-      metricTotal.textContent = tot;
-      metricPresentes.textContent = pres;
-      metricAusentes.textContent = aus;
-    }
-
-    // 3. Acreditar Participante
-    async function acreditar(participanteId) {
-      try {
-        const res = await fetch(`/eventos/${eventoActualId}/acreditar/${participanteId}`, {
-          method: 'POST'
-        });
-        if (res.ok) {
-          cargarParticipantes();
+            if (pass === "1080") {
+                inputAcceso.value = "";
+                document.getElementById('modal-acceso').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+                obtenerEventos();
+            } else {
+                errorElem.classList.remove('hidden');
+                inputAcceso.value = "";
+                inputAcceso.focus();
+            }
         }
-      } catch (err) {
-        alert("Error al marcar asistencia");
-      }
-    }
 
-    // 4. Desmarcar Asistencia
-    async function desmarcarAsistencia(participanteId) {
-      try {
-        const res = await fetch(`/eventos/${eventoActualId}/acreditar/${participanteId}`, {
-          method: 'DELETE'
-        });
-        if (res.ok) {
-          cargarParticipantes();
+        // 1. Obtener Historial de Eventos
+        async function obtenerEventos() {
+            try {
+                const response = await fetch(`${API_URL}/eventos`);
+                const eventos = await response.json();
+                const select = document.getElementById('select-evento');
+                select.innerHTML = '';
+                
+                if (eventos.length === 0) {
+                    select.innerHTML = '<option value="">No hay eventos creados</option>';
+                    eventoSeleccionadoId = null;
+                    renderizarTabla([]);
+                    return;
+                }
+
+                eventos.forEach((ev) => {
+                    const opt = document.createElement('option');
+                    opt.value = ev.id;
+                    opt.textContent = `${ev.fecha} | ${ev.nombre}`;
+                    select.appendChild(opt);
+                });
+
+                select.value = eventos[0].id;
+                cambiarEvento();
+            } catch (err) {
+                console.error("Error al obtener eventos:", err);
+            }
         }
-      } catch (err) {
-        alert("Error al desmarcar asistencia");
-      }
-    }
 
-    // 5. Búsqueda con Debounce
-    inputBuscar.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        cargarParticipantes();
-      }, 250);
-    });
-
-    // 6. Crear Evento
-    document.getElementById('formCrearEvento').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const payload = {
-        nombre: document.getElementById('evNombre').value,
-        fecha: document.getElementById('evFecha').value,
-        descripcion: document.getElementById('evDesc').value
-      };
-
-      try {
-        const res = await fetch('/eventos', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          document.getElementById('evNombre').value = '';
-          cargarEventos();
+        function cambiarEvento() {
+            eventoSeleccionadoId = document.getElementById('select-evento').value;
+            buscarParticipantes();
         }
-      } catch (err) {
-        alert("Error al crear evento");
-      }
-    });
 
-    // 7. Descargar Excel de Asistencia
-    btnExportarExcel.addEventListener('click', () => {
-      if (!eventoActualId) {
-        alert("Selecciona un evento primero");
-        return;
-      }
-      window.location.href = `/eventos/${eventoActualId}/excel`;
-    });
-
-    // 8. Lógica de Modal para Nuevo Participante
-    const modal = document.getElementById('modalParticipante');
-    document.getElementById('btnNuevoParticipante').addEventListener('click', () => modal.classList.add('active'));
-    document.getElementById('btnCerrarModal').addEventListener('click', () => modal.classList.remove('active'));
-
-    document.getElementById('formNuevoParticipante').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const payload = {
-        id: document.getElementById('partId').value.trim(),
-        nombre: document.getElementById('partNombre').value.trim(),
-        correo: document.getElementById('partCorreo').value.trim() || null,
-        whatsapp: document.getElementById('partWhatsapp').value.trim() || null,
-        profesion: document.getElementById('partProfesion').value.trim() || null
-      };
-
-      try {
-        const res = await fetch('/participantes', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          modal.classList.remove('active');
-          document.getElementById('formNuevoParticipante').reset();
-          cargarParticipantes();
+        // 2. Buscador Reactivo
+        async function buscarParticipantes() {
+            if (!eventoSeleccionadoId) return;
+            const query = document.getElementById('buscador').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/buscar?query=${encodeURIComponent(query)}`);
+                const participantes = await response.json();
+                renderizarTabla(participantes);
+            } catch (err) {
+                console.error("Error en la búsqueda:", err);
+            }
         }
-      } catch (err) {
-        alert("Error al registrar participante");
-      }
-    });
-  </script>
+
+        function renderizarTabla(participantes) {
+            const tbody = document.getElementById('tabla-resultados');
+            tbody.innerHTML = '';
+            
+            let totalRegistrados = participantes.length;
+            let countAsistentes = 0;
+
+            if (totalRegistrados === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">No se encontraron registros. Registra uno nuevo en el panel izquierdo.</td></tr>`;
+                document.getElementById('contador-total').textContent = '0';
+                document.getElementById('contador-asistieron').textContent = '0';
+                document.getElementById('contador-faltantes').textContent = '0';
+                return;
+            }
+
+            participantes.forEach(p => {
+                const fila = document.createElement('tr');
+                fila.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                
+                if (p.asistio) countAsistentes++;
+
+                const badge = p.asistio
+                    ? `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">✓ Presente (${p.hora_acreditacion ? p.hora_acreditacion.split(' ')[1] : ''})</span>`
+                    : `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">⏳ Pendiente</span>`;
+
+                // Botón de Acreditar o Desmarcar según el estado
+                const btnAcreditar = p.asistio
+                    ? `<button onclick="desmarcarParticipante('${p.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-amber-300 flex items-center gap-1" title="Volver a poner en estado pendiente">
+                        ↩️ Desmarcar
+                       </button>`
+                    : `<button onclick="acreditarParticipante('${p.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
+                        Marcar Asistencia
+                       </button>`;
+
+                fila.innerHTML = `
+                    <td class="p-3">
+                        <div class="font-bold text-slate-900">${p.nombre}</div>
+                        <div class="text-xs text-slate-400 font-mono">C.C. ${p.id}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="text-slate-700">${p.profesion || 'No definida'}</div>
+                        <div class="text-xs text-slate-400">${p.whatsapp || 'Sin WhatsApp'}</div>
+                    </td>
+                    <td class="p-3">${badge}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center items-center gap-1.5">
+                            ${btnAcreditar}
+                            <button onclick="cargarParaEditar(${JSON.stringify(p).replace(/"/g, '&quot;')})" class="text-slate-500 hover:text-emerald-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-emerald-200 bg-white" title="Editar datos">
+                                ✏️
+                            </button>
+                            <button onclick="solicitarEliminarParticipante('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-rose-600 font-semibold text-xs border border-slate-200 px-2 py-1.5 rounded-lg hover:border-rose-200 bg-white" title="Eliminar participante">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            let countFaltantes = totalRegistrados - countAsistentes;
+
+            document.getElementById('contador-total').textContent = totalRegistrados;
+            document.getElementById('contador-asistieron').textContent = countAsistentes;
+            document.getElementById('contador-faltantes').textContent = countFaltantes;
+        }
+
+        // 3. Marcar Asistencia en Tiempo Real
+        async function acreditarParticipante(id) {
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/acreditar/${id}`, { method: 'POST' });
+                if (response.ok) {
+                    buscarParticipantes();
+                }
+            } catch (err) {
+                alert("Error al marcar asistencia");
+            }
+        }
+
+        // 3.1. Desmarcar Asistencia (Volver a Pendiente)
+        async function desmarcarParticipante(id) {
+            try {
+                const response = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}/acreditar/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    buscarParticipantes();
+                } else {
+                    alert("No se pudo desmarcar la asistencia.");
+                }
+            } catch (err) {
+                alert("Error de conexión al desmarcar la asistencia");
+            }
+        }
+
+        // 4. Modificar / Registrar Participante
+        async function guardarParticipante(event) {
+            event.preventDefault();
+            const payload = {
+                id: document.getElementById('part-id').value.trim(),
+                nombre: document.getElementById('part-nombre').value.trim(),
+                correo: document.getElementById('part-correo').value.trim() || null,
+                whatsapp: document.getElementById('part-whatsapp').value.trim() || null,
+                profesion: document.getElementById('part-profesion').value.trim() || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/participantes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("¡Participante guardado/actualizado con éxito!");
+                    limpiarFormulario();
+                    buscarParticipantes();
+                } else {
+                    const data = await response.json();
+                    alert("Error: " + JSON.stringify(data.detail));
+                }
+            } catch (err) {
+                alert("Error de conexión con el servidor.");
+            }
+        }
+
+        function cargarParaEditar(p) {
+            document.getElementById('part-id').value = p.id;
+            document.getElementById('part-id').readOnly = true;
+            document.getElementById('part-id').classList.add('bg-slate-100', 'cursor-not-allowed');
+            document.getElementById('part-nombre').value = p.nombre;
+            document.getElementById('part-correo').value = p.correo || '';
+            document.getElementById('part-whatsapp').value = p.whatsapp || '';
+            document.getElementById('part-profesion').value = p.profesion || '';
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('form-participante').reset();
+            document.getElementById('part-id').readOnly = false;
+            document.getElementById('part-id').classList.remove('bg-slate-100', 'cursor-not-allowed');
+        }
+
+        // 5. Gestión de Eventos
+        function abrirModalEvento() { document.getElementById('modal-evento').classList.remove('hidden'); }
+        function cerrarModalEvento() { document.getElementById('modal-evento').classList.add('hidden'); }
+
+        async function guardarEvento(event) {
+            event.preventDefault();
+            const payload = {
+                nombre: document.getElementById('ev-nombre').value.trim(),
+                fecha: document.getElementById('ev-fecha').value,
+                descripcion: document.getElementById('ev-descripcion').value.trim() || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/eventos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("¡Nuevo evento creado!");
+                    cerrarModalEvento();
+                    obtenerEventos();
+                }
+            } catch (err) {
+                alert("Error al crear el evento");
+            }
+        }
+
+        // 6. Eliminar Evento con Contraseña (1080)
+        function solicitarEliminarEvento() {
+            if (!eventoSeleccionadoId) {
+                alert("Por favor selecciona un evento válido para eliminar.");
+                return;
+            }
+            const inputEvento = document.getElementById('inputPassEliminarEvento');
+            inputEvento.value = "";
+            document.getElementById('errorPassEliminarEvento').classList.add('hidden');
+            document.getElementById('modal-eliminar-evento').classList.remove('hidden');
+            setTimeout(() => inputEvento.focus(), 100);
+        }
+
+        function cerrarModalEliminarEvento() {
+            document.getElementById('modal-eliminar-evento').classList.add('hidden');
+        }
+
+        async function confirmarEliminacionEvento() {
+            const inputEvento = document.getElementById('inputPassEliminarEvento');
+            const pass = inputEvento.value.trim();
+            const errorElem = document.getElementById('errorPassEliminarEvento');
+
+            if (pass !== "1080") {
+                errorElem.textContent = "Contraseña incorrecta.";
+                errorElem.classList.remove('hidden');
+                inputEvento.value = "";
+                return;
+            }
+
+            if (!eventoSeleccionadoId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/eventos/${eventoSeleccionadoId}`, { method: 'DELETE' });
+
+                if (res.ok) {
+                    cerrarModalEliminarEvento();
+                    alert("Evento y sus registros de asistencia eliminados con éxito.");
+                    obtenerEventos();
+                } else {
+                    const errData = await res.json();
+                    errorElem.textContent = errData.detail || "Error al eliminar.";
+                    errorElem.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorElem.textContent = "Error de conexión con el servidor.";
+                errorElem.classList.remove('hidden');
+            }
+        }
+
+        // 7. Eliminar Participante con Contraseña (1122)
+        function solicitarEliminarParticipante(id, nombre) {
+            participanteAEliminarId = id;
+            document.getElementById('nombreParticipanteEliminar').textContent = `${nombre} (C.C. ${id})`;
+            const inputPart = document.getElementById('inputPassEliminarPart');
+            inputPart.value = "";
+            document.getElementById('errorPassEliminarPart').classList.add('hidden');
+            document.getElementById('modal-eliminar-participante').classList.remove('hidden');
+            setTimeout(() => inputPart.focus(), 100);
+        }
+
+        function cerrarModalEliminarParticipante() {
+            document.getElementById('modal-eliminar-participante').classList.add('hidden');
+            participanteAEliminarId = null;
+        }
+
+        async function confirmarEliminacionParticipante() {
+            const inputPart = document.getElementById('inputPassEliminarPart');
+            const pass = inputPart.value.trim();
+            const errorElem = document.getElementById('errorPassEliminarPart');
+
+            if (pass !== "1122") {
+                errorElem.textContent = "Código de seguridad incorrecto (1122).";
+                errorElem.classList.remove('hidden');
+                inputPart.value = "";
+                return;
+            }
+
+            if (!participanteAEliminarId) return;
+
+            try {
+                const res = await fetch(`${API_URL}/participantes/${participanteAEliminarId}`, { method: 'DELETE' });
+
+                if (res.ok) {
+                    cerrarModalEliminarParticipante();
+                    alert("Participante eliminado exitosamente.");
+                    buscarParticipantes();
+                } else {
+                    const errData = await res.json();
+                    errorElem.textContent = errData.detail || "Error al eliminar el participante.";
+                    errorElem.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorElem.textContent = "Error de conexión con el servidor.";
+                errorElem.classList.remove('hidden');
+            }
+        }
+
+        // 8. Descargar Reporte en Excel
+        function descargarExcel() {
+            if (!eventoSeleccionadoId) {
+                alert("Por favor selecciona un evento válido.");
+                return;
+            }
+            window.open(`${API_URL}/eventos/${eventoSeleccionadoId}/excel`, '_blank');
+        }
+    </script>
 </body>
 </html>
