@@ -1,7 +1,7 @@
 import os
 import csv
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
@@ -31,10 +31,6 @@ app.add_middleware(
 
 
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE ARCHIVO CSV)
-import os
-import csv
-from fastapi import HTTPException, status
-
 def cargar_excel_inicial():
     """Carga o actualiza los participantes del CSV soportando la codificación de tu archivo."""
     try:
@@ -89,7 +85,7 @@ def cargar_excel_inicial():
             registros = list(registros_dict.values())
 
             if registros:
-                # Insertar/Actualizar en lotes de 50 para evitar el límite de 100 de Supabase
+                # Insertar/Actualizar en lotes de 50 para evitar límites de payload
                 tamano_lote = 50
                 total_cargados = 0
                 
@@ -162,13 +158,30 @@ def listar_eventos():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al listar eventos: {e}")
 
+@app.delete("/eventos/{evento_id}", tags=["Eventos"])
+def eliminar_evento(evento_id: int):
+    """Elimina un evento y todas sus asistencias registradas."""
+    try:
+        # 1. Elimina asistencias asociadas al evento
+        supabase.table("asistencias").delete().eq("evento_id", evento_id).execute()
+        
+        # 2. Elimina el evento
+        supabase.table("eventos").delete().eq("id", evento_id).execute()
+        
+        return {"mensaje": f"Evento {evento_id} eliminado exitosamente."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar el evento: {str(e)}"
+        )
+
 
 # 7. MÓDULO DE ACREDITACIÓN Y BÚSQUEDA OPTIMIZADA
 @app.get("/eventos/{evento_id}/buscar", tags=["Acreditación"])
 def buscar_participantes_evento(evento_id: int, query: str = ""):
     """Busca participantes y mapea su estado de asistencia para un evento específico."""
     try:
-        # 1. Obtener participantes
+        # 1. Obtener participantes (Incrementado a .limit(1000) para traer la lista completa)
         base_query = supabase.table("participantes").select("*")
         if query.strip():
             search_pattern = f"%{query.strip()}%"
@@ -176,13 +189,14 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
                 f"id.ilike.{search_pattern},nombre.ilike.{search_pattern},correo.ilike.{search_pattern}"
             )
         
-        participantes_res = base_query.order("nombre", desc=False).limit(100).execute()
+        participantes_res = base_query.order("nombre", desc=False).limit(1000).execute()
         participantes = participantes_res.data or []
 
-        # 2. Obtener las asistencias para este evento específico
+        # 2. Obtener las asistencias para este evento específico (limitado a 1000)
         asistencias_res = supabase.table("asistencias")\
             .select("*")\
             .eq("evento_id", evento_id)\
+            .limit(1000)\
             .execute()
         
         # Crear un mapa rápido {participante_id: registro_asistencia}
@@ -248,25 +262,3 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
         return {"status": "success", "message": "Participante guardado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar participante: {e}")
-
-from fastapi import HTTPException, status
-
-@app.delete("/eventos/{evento_id}")
-def eliminar_evento(evento_id: int):
-    try:
-        # 1. Elimina asistencias asociadas al evento
-        supabase.table("asistencias").delete().eq("evento_id", evento_id).execute()
-        
-        # 2. Elimina el evento
-        respuesta = supabase.table("eventos").delete().eq("id", evento_id).execute()
-        
-        return {"mensaje": f"Evento {evento_id} eliminado exitosamente."}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al eliminar el evento: {str(e)}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al eliminar el evento: {str(e)}"
-        )
