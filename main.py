@@ -39,17 +39,29 @@ def _extraer_registros_de_filas(filas_dict):
     """Recibe una lista de diccionarios (una fila = un dict de columna->valor)
     y devuelve el diccionario final {cedula: datos} listo para subir a Supabase.
     Comparte la misma lógica flexible de nombres de columna, sin importar si
-    vino de un CSV o de un Excel."""
+    vino de un CSV o de un Excel.
+
+    Si una fila no trae cédula/ID (por ejemplo, una base de prueba sin ese
+    dato todavía), se le asigna un ID temporal autogenerado (PRUEBA-0001,
+    PRUEBA-0002...) para que el sistema pueda diferenciar personas, incluso
+    si comparten el mismo nombre. Estos IDs se reemplazan automáticamente
+    apenas subas un archivo que sí incluya la columna de cédula real."""
     registros_dict = {}
+    contador_sin_cedula = 0
 
     for row in filas_dict:
         cedula_raw = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
         cedula_clean = str(cedula_raw).strip().split('.')[0]
 
-        if not cedula_clean or cedula_clean.lower() in ["nan", "none", "null", ""]:
-            continue
+        nombre = str(row.get("NOMBRES") or row.get("NOMBRE") or row.get("Nombre Completo") or row.get("nombre") or "").strip()
 
-        nombre = str(row.get("NOMBRE") or row.get("Nombre Completo") or row.get("nombre") or "").strip()
+        if not cedula_clean or cedula_clean.lower() in ["nan", "none", "null", ""]:
+            if not nombre:
+                # Fila vacía o sin datos útiles: se descarta
+                continue
+            contador_sin_cedula += 1
+            cedula_clean = f"PRUEBA-{contador_sin_cedula:04d}"
+
         correo_reg = str(row.get("Endereço de e-mail") or row.get("correo_registro") or "").strip()
         correo = str(row.get("Correo electrónico") or row.get("correo") or "").strip()
         whatsapp = str(row.get("WhatsApp") or row.get("whatsapp") or "").strip()
@@ -416,10 +428,6 @@ def descargar_reporte_excel(evento_id: str):
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al generar el archivo Excel: {str(e)}"
-        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al generar el archivo Excel: {str(e)}"
