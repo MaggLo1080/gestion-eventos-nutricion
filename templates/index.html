@@ -633,6 +633,36 @@
             }
         }
 
+
+        // 9. Imprimir Sticker (habla directo con el agente local en la PC del evento)
+async function imprimirSticker(nombre, rango) {
+    try {
+        const res = await fetch('http://localhost:5001/imprimir', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, rango })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert("Error al imprimir: " + (err.message || "el agente respondió con un error."));
+            return;
+        }
+
+        const data = await res.json();
+        if (data.status !== "success") {
+            alert("Error al imprimir: " + data.message);
+        }
+        // Éxito silencioso: no interrumpimos con un alert en cada impresión exitosa,
+        // para no frenar el flujo del staff acreditando participantes uno tras otro.
+    } catch (err) {
+        alert("No se pudo conectar con el agente de impresión local (localhost:5001).\n\n" +
+              "Verifica que:\n" +
+              "1) agente_impresion.py esté corriendo en esta PC\n" +
+              "2) Si es la primera vez, hayas permitido 'contenido no seguro' para este sitio en la configuración de Chrome (candado → Configuración del sitio)");
+    }
+}
+
         // 8. Descargar Reporte en Excel
         function descargarExcel() {
             if (!eventoSeleccionadoId) {
