@@ -37,47 +37,49 @@ app.add_middleware(
 # 3. CARGA INICIAL AUTOMÁTICA DE PARTICIPANTES (DESDE EXCEL O CSV)
 def _extraer_registros_de_filas(filas_dict):
     """Recibe una lista de diccionarios (una fila = un dict de columna->valor)
-    y devuelve el diccionario final {cedula: datos} listo para subir a Supabase.
-    Comparte la misma lógica flexible de nombres de columna, sin importar si
-    vino de un CSV o de un Excel.
+    y devuelve el diccionario final {id: datos} listo para subir a Supabase.
 
-    Si una fila no trae cédula/ID (por ejemplo, una base de prueba sin ese
-    dato todavía), se le asigna un ID temporal autogenerado (PRUEBA-0001,
-    PRUEBA-0002...) para que el sistema pueda diferenciar personas, incluso
-    si comparten el mismo nombre. Estos IDs se reemplazan automáticamente
-    apenas subas un archivo que sí incluya la columna de cédula real."""
+    Formato esperado (BASE GENERAL CONGRESO 2026):
+    Nombre completo | Documento de identidad | Numero de documento |
+    Numero de telefono | Correo electronico | Ciudad | Pais | Profesión | Estatus | Empresa
+
+    Si una fila no trae número de documento (común en conferencistas), se le asigna
+    un ID temporal autogenerado (PRUEBA-0001, PRUEBA-0002...) para diferenciar
+    personas aunque compartan nombre. Empresa se ignora intencionalmente."""
     registros_dict = {}
     contador_sin_cedula = 0
 
     for row in filas_dict:
-        cedula_raw = row.get("Cédula de Ciudadanía") or row.get("id") or row.get("cedula") or ""
-        cedula_clean = str(cedula_raw).strip().split('.')[0]
+        doc_raw = row.get("Numero de documento") or ""
+        doc_clean = str(doc_raw).strip().split('.')[0]
 
-        nombre = str(row.get("NOMBRES") or row.get("NOMBRE") or row.get("Nombre Completo") or row.get("nombre") or "").strip()
+        nombre = str(row.get("Nombre completo") or "").strip()
 
-        if not cedula_clean or cedula_clean.lower() in ["nan", "none", "null", ""]:
+        if not doc_clean or doc_clean.lower() in ["nan", "none", "null", ""]:
             if not nombre:
-                # Fila vacía o sin datos útiles: se descarta
-                continue
+                continue  # fila vacía, se descarta
             contador_sin_cedula += 1
-            cedula_clean = f"PRUEBA-{contador_sin_cedula:04d}"
+            doc_clean = f"PRUEBA-{contador_sin_cedula:04d}"
 
-        correo_reg = str(row.get("Endereço de e-mail") or row.get("correo_registro") or "").strip()
-        correo = str(row.get("Correo electrónico") or row.get("correo") or "").strip()
-        whatsapp = str(row.get("WhatsApp") or row.get("whatsapp") or "").strip()
-        profesion = str(row.get("Profesión") or row.get("profesion") or "").strip()
-        estatus = str(row.get("ESTATUS") or row.get("Estatus") or row.get("estatus") or "").strip()
-        marca_tiempo = str(row.get("Carimbo de data/hora") or row.get("marca_tiempo") or "").strip()
+        tipo_documento = str(row.get("Documento de identidad") or "").strip()
+        correo = str(row.get("Correo electronico") or "").strip()
+        telefono = str(row.get("Numero de telefono") or "").strip()
+        ciudad = str(row.get("Ciudad") or "").strip()
+        pais = str(row.get("Pais") or "").strip()
+        profesion = str(row.get("Profesión") or "").strip()
+        estatus = str(row.get("Estatus") or "").strip()
 
-        registros_dict[cedula_clean] = {
-            "id": cedula_clean,
+        registros_dict[doc_clean] = {
+            "id": doc_clean,
             "nombre": nombre if nombre else "Sin Nombre",
-            "correo_registro": correo_reg if correo_reg else None,
+            "tipo_documento": tipo_documento if tipo_documento else None,
+            "correo_registro": None,
             "correo": correo if correo else None,
-            "whatsapp": whatsapp if whatsapp else None,
+            "whatsapp": telefono if telefono else None,
+            "ciudad": ciudad if ciudad else None,
+            "pais": pais if pais else None,
             "profesion": profesion if profesion else None,
-            "estatus": estatus if estatus else None,
-            "marca_tiempo": marca_tiempo if marca_tiempo else None
+            "estatus": estatus if estatus else None
         }
 
     return list(registros_dict.values())
@@ -118,7 +120,7 @@ def _leer_filas_desde_csv(archivo_path):
 
 def cargar_excel_inicial():
     """Carga o actualiza los participantes desde participantes.xlsx (preferido)
-    o participantes.csv (respaldo), soportando la columna ESTATUS."""
+    o participantes.csv (respaldo), soportando la columna Estatus."""
     try:
         ruta_xlsx = "participantes.xlsx"
         ruta_csv = "participantes.csv"
@@ -171,14 +173,16 @@ class EventoCrear(BaseModel):
     descripcion: Optional[str] = None
 
 class ParticipanteCrear(BaseModel):
-    id: str  # Cédula
+    id: str  # Numero de documento (o PRUEBA-XXXX si no tiene)
     nombre: str
+    tipo_documento: Optional[str] = None
     correo_registro: Optional[str] = None
     correo: Optional[EmailStr] = None
-    whatsapp: Optional[str] = None
+    whatsapp: Optional[str] = None  # Numero de telefono
+    ciudad: Optional[str] = None
+    pais: Optional[str] = None
     profesion: Optional[str] = None
     estatus: Optional[str] = None
-    marca_tiempo: Optional[str] = None
 
 
 # 6. MÓDULO DE GESTIÓN DE EVENTOS
@@ -255,8 +259,11 @@ def buscar_participantes_evento(evento_id: int, query: str = ""):
             resultados.append({
                 "id": p["id"],
                 "nombre": p["nombre"],
+                "tipo_documento": p.get("tipo_documento"),
                 "correo": p.get("correo") or p.get("correo_registro"),
                 "whatsapp": p.get("whatsapp"),
+                "ciudad": p.get("ciudad"),
+                "pais": p.get("pais"),
                 "profesion": p.get("profesion"),
                 "estatus": p.get("estatus"),
                 "asistio": asistencia["asistio"] if asistencia else 0,
@@ -296,12 +303,14 @@ def crear_o_actualizar_participante(participante: ParticipanteCrear):
         data = {
             "id": participante.id,
             "nombre": participante.nombre,
+            "tipo_documento": participante.tipo_documento,
             "correo_registro": participante.correo_registro,
             "correo": str(participante.correo) if participante.correo else None,
             "whatsapp": participante.whatsapp,
+            "ciudad": participante.ciudad,
+            "pais": participante.pais,
             "profesion": participante.profesion,
-            "estatus": participante.estatus,
-            "marca_tiempo": participante.marca_tiempo
+            "estatus": participante.estatus
         }
 
         supabase.table("participantes").upsert(data).execute()
@@ -383,10 +392,13 @@ def descargar_reporte_excel(evento_id: str):
         ws.title = "Reporte Asistencia"
 
         ws.append([
-            "Cédula",
+            "Tipo de Documento",
+            "Numero de Documento",
             "Nombre Completo",
             "Correo Electrónico",
-            "WhatsApp",
+            "Teléfono",
+            "Ciudad",
+            "País",
             "Profesión",
             "Estatus",
             "Estado de Asistencia",
@@ -397,15 +409,18 @@ def descargar_reporte_excel(evento_id: str):
             raw_id = str(p.get("id") or "").strip().split('.')[0]
 
             asistio = raw_id in mapa_asistencia
-            hora = mapa_asistencia.get(raw_id) if asistio else "-"
+            hora = mapa_asistencia.get(raw_id) if asistio else ""
 
             ws.append([
+                p.get("tipo_documento") or "",
                 raw_id,
                 p.get("nombre", ""),
-                p.get("correo") or p.get("correo_registro") or "No registrado",
-                p.get("whatsapp") or "No registrado",
-                p.get("profesion") or "No definida",
-                p.get("estatus") or "No definido",
+                p.get("correo") or p.get("correo_registro") or "",
+                p.get("whatsapp") or "",
+                p.get("ciudad") or "",
+                p.get("pais") or "",
+                p.get("profesion") or "",
+                p.get("estatus") or "",
                 "PRESENTE" if asistio else "AUSENTE",
                 hora
             ])
